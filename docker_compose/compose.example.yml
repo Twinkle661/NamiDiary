@@ -1,13 +1,14 @@
 services:
-  diary:
-    image: namidiary:local
+  NamiDiary:
+    build: .
+    container_name: NamiDiary
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:8188:8188"
+    expose:
+      - "8188"
+    env_file: .env
     volumes:
       - ./data:/app/data
       - ./config.yml:/app/config.yml:ro
-    env_file: .env
     healthcheck:
       test: ["CMD", "/app/namidiary", "healthcheck"]
       interval: 30s
