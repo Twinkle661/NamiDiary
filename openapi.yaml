@@ -648,7 +648,7 @@ paths:
                                 type: string
             summary: Read a diary with front matter
         post:
-            description: Date is checked in app.timezone. Markdown survives indexing failure. Memory work does not delay the response.
+            description: Date is checked in app.timezone. An embedding failure still stores the entry; its vector is backfilled by normalize. Memory work does not delay the response.
             operationId: post_diary_date
             parameters:
                 - in: path

@@ -7,9 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -57,11 +57,23 @@ type SimilarRequest struct {
 	Recent      []Message `json:"recent"`
 }
 
+func schema(dim int) string {
+	return fmt.Sprintf(`CREATE TABLE IF NOT EXISTS diary(id INTEGER PRIMARY KEY AUTOINCREMENT,date TEXT NOT NULL,created TEXT,updated TEXT,keywords TEXT,summary TEXT,location TEXT,content TEXT NOT NULL,file_path TEXT NOT NULL UNIQUE);CREATE INDEX IF NOT EXISTS diary_date ON diary(date);CREATE VIRTUAL TABLE IF NOT EXISTS diary_fts USING fts5(content,keywords,tokenize='trigram');CREATE VIRTUAL TABLE IF NOT EXISTS diary_vec USING vec0(id INTEGER PRIMARY KEY,embedding float[%d]);`, dim)
+}
+
+// Open prepares the derived index. A new database or a stale embedding status
+// triggers one Markdown scan so reads can be served from SQL afterwards.
 func Open(c config.Config, emb Embedder) (*Service, error) {
 	if err := os.MkdirAll(filepath.Join(c.App.DataDir, "diary"), 0700); err != nil {
 		return nil, err
 	}
-	db, err := sqlitex.Open(filepath.Join(c.App.DataDir, "diary.db"))
+	dbPath := filepath.Join(c.App.DataDir, "diary.db")
+	_, statErr := os.Stat(dbPath)
+	if statErr != nil && !os.IsNotExist(statErr) {
+		return nil, statErr
+	}
+	fresh := os.IsNotExist(statErr)
+	db, err := sqlitex.Open(dbPath)
 	if err != nil {
 		return nil, err
 	}
@@ -71,28 +83,51 @@ func Open(c config.Config, emb Embedder) (*Service, error) {
 		return nil, err
 	}
 	s := &Service{DB: db, Config: c.Diary, Dir: c.App.DataDir, Location: loc, Embedder: emb, Now: time.Now}
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS diary (id INTEGER PRIMARY KEY AUTOINCREMENT,date TEXT NOT NULL,created TEXT,updated TEXT,keywords TEXT,summary TEXT,location TEXT,content TEXT NOT NULL,file_path TEXT NOT NULL UNIQUE)`)
-	if err != nil {
+	if _, err = db.Exec(schema(c.Diary.Embedding.Dimensions)); err != nil {
 		db.Close()
 		return nil, err
 	}
-	_, err = db.Exec(fmt.Sprintf(`CREATE VIRTUAL TABLE IF NOT EXISTS diary_fts USING fts5(content,keywords,tokenize='trigram');CREATE VIRTUAL TABLE IF NOT EXISTS diary_vec USING vec0(id INTEGER PRIMARY KEY,embedding float[%d]);`, c.Diary.Embedding.Dimensions))
-	if err != nil {
-		db.Close()
-		return nil, err
+	if fresh || !s.validStatus() {
+		if err = s.rebuild(context.Background(), false); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("diary index rebuild: %w", err)
+		}
 	}
 	return s, nil
 }
 func (s *Service) path(date string) string {
 	return filepath.Join(s.Dir, "diary", date[:4], date[5:7], date[5:]+".md")
 }
+
+const entryColumns = "id,date,created,updated,keywords,summary,location,content,file_path"
+
+type scanner interface{ Scan(...any) error }
+
+func scanEntry(row scanner) (int64, Entry, error) {
+	var id int64
+	var e Entry
+	var created, updated, keywords, summary, location sql.NullString
+	if err := row.Scan(&id, &e.Date, &created, &updated, &keywords, &summary, &location, &e.Body, &e.FilePath); err != nil {
+		return 0, e, err
+	}
+	e.Created, e.Updated, e.Summary, e.Location = created.String, updated.String, summary.String, location.String
+	e.Keywords = []string{}
+	if keywords.String != "" {
+		if err := json.Unmarshal([]byte(keywords.String), &e.Keywords); err != nil {
+			return 0, e, err
+		}
+	}
+	return id, e, nil
+}
+
+// Get reads one entry from the index; Markdown is only touched by writes and rebuilds.
 func (s *Service) Get(ctx context.Context, date string) (Entry, error) {
 	if !ValidDate(date) {
 		return Entry{}, apperr.Invalid("Date must be yyyy-MM-dd.")
 	}
-	e, err := Read(s.path(date))
-	if os.IsNotExist(err) {
-		return e, apperr.Missing("Diary entry not found.")
+	_, e, err := scanEntry(s.DB.QueryRowContext(ctx, "SELECT "+entryColumns+" FROM diary WHERE date=? ORDER BY id DESC LIMIT 1", date))
+	if errors.Is(err, sql.ErrNoRows) {
+		return Entry{}, apperr.Missing("Diary entry not found.")
 	}
 	return e, err
 }
@@ -109,6 +144,8 @@ func (s *Service) files() ([]string, error) {
 	})
 	return paths, err
 }
+
+// Latest returns the newest n indexed entries, oldest first.
 func (s *Service) Latest(ctx context.Context, q LatestQuery) ([]Entry, error) {
 	if q.N < 1 {
 		return nil, apperr.Invalid("Recent must be positive.")
@@ -116,26 +153,32 @@ func (s *Service) Latest(ctx context.Context, q LatestQuery) ([]Entry, error) {
 	if q.Until != nil && !ValidDate(*q.Until) {
 		return nil, apperr.Invalid("Invalid until date.")
 	}
-	paths, err := s.files()
+	query := "SELECT " + entryColumns + " FROM diary"
+	args := []any{}
+	if q.Until != nil {
+		query += " WHERE date<=?"
+		args = append(args, *q.Until)
+	}
+	query += " ORDER BY date DESC LIMIT ?"
+	args = append(args, q.N)
+	rows, err := s.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	out := []Entry{}
-	for _, p := range paths {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		e, err := Read(p)
+	for rows.Next() {
+		_, e, err := scanEntry(rows)
 		if err != nil {
 			return nil, err
 		}
-		if q.Until == nil || e.Date <= *q.Until {
-			out = append(out, e)
-		}
+		out = append(out, e)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Date < out[j].Date })
-	if len(out) > q.N {
-		out = out[len(out)-q.N:]
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+		out[i], out[j] = out[j], out[i]
 	}
 	return out, nil
 }
@@ -198,7 +241,7 @@ func (s *Service) Add(ctx context.Context, date string, r WriteRequest) error {
 	if err := atomicWrite(p, []byte(e.Markdown())); err != nil {
 		return err
 	}
-	if err := s.rebuild(ctx, false); err != nil {
+	if err := s.index(ctx, e, true); err != nil {
 		return err
 	}
 	if s.OnAdded != nil {
@@ -219,7 +262,11 @@ func (s *Service) Patch(ctx context.Context, r WriteRequest) error {
 	if len(es) == 0 {
 		return apperr.Missing("No diary entries exist.")
 	}
-	e := es[0]
+	// The index only locates the target; the patch itself starts from its Markdown source.
+	e, err := Read(es[0].FilePath)
+	if err != nil {
+		return err
+	}
 	created, err := time.Parse(time.RFC3339Nano, e.Created)
 	if err != nil || s.Now().Sub(created) > s.Config.PatchWindow {
 		return apperr.New(409, "PATCH_WINDOW_EXPIRED", fmt.Sprintf("Diary %s was created at %s; patch window expired.", e.Date, e.Created))
@@ -236,6 +283,7 @@ func (s *Service) Patch(ctx context.Context, r WriteRequest) error {
 		}
 	}
 	e.Keywords = keywords
+	oldSummary := e.Summary
 	if summary := strings.TrimSpace(r.Meta.Summary); summary != "" {
 		e.Summary = summary
 	}
@@ -243,7 +291,77 @@ func (s *Service) Patch(ctx context.Context, r WriteRequest) error {
 	if err = atomicWrite(e.FilePath, []byte(e.Markdown())); err != nil {
 		return err
 	}
-	return s.rebuild(ctx, false)
+	return s.index(ctx, e, e.Summary != oldSummary)
+}
+
+// index upserts one entry into the derived tables. When reembed is set, the old
+// vector is dropped and the summary embedded again; an embedding failure leaves the
+// vector empty (similar skips the entry) until normalize backfills it.
+func (s *Service) index(ctx context.Context, e Entry, reembed bool) error {
+	var vector []byte
+	if reembed && e.Summary != "" {
+		vector = s.embed(ctx, e)
+	}
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	ks, _ := json.Marshal(e.Keywords)
+	var id int64
+	err = tx.QueryRowContext(ctx, "SELECT id FROM diary WHERE file_path=?", e.FilePath).Scan(&id)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		res, err := tx.ExecContext(ctx, "INSERT INTO diary(date,created,updated,keywords,summary,location,content,file_path) VALUES(?,?,?,?,?,?,?,?)", e.Date, e.Created, e.Updated, string(ks), e.Summary, e.Location, e.Body, e.FilePath)
+		if err != nil {
+			return err
+		}
+		if id, err = res.LastInsertId(); err != nil {
+			return err
+		}
+	case err != nil:
+		return err
+	default:
+		if _, err = tx.ExecContext(ctx, "UPDATE diary SET date=?,created=?,updated=?,keywords=?,summary=?,location=?,content=? WHERE id=?", e.Date, e.Created, e.Updated, string(ks), e.Summary, e.Location, e.Body, id); err != nil {
+			return err
+		}
+		if _, err = tx.ExecContext(ctx, "DELETE FROM diary_fts WHERE rowid=?", id); err != nil {
+			return err
+		}
+	}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO diary_fts(rowid,content,keywords) VALUES(?,?,?)", id, e.Body, string(ks)); err != nil {
+		return err
+	}
+	if reembed {
+		if _, err = tx.ExecContext(ctx, "DELETE FROM diary_vec WHERE id=?", id); err != nil {
+			return err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	if vector != nil {
+		// Kept outside the row transaction so a vector problem cannot hide the entry from reads.
+		if _, err = s.DB.ExecContext(ctx, "INSERT INTO diary_vec(id,embedding) VALUES(?,?)", id, vector); err != nil {
+			slog.Warn("Diary vector not stored; run diary normalize to backfill", "date", e.Date, "error", err)
+		}
+	}
+	return nil
+}
+func (s *Service) embed(ctx context.Context, e Entry) []byte {
+	vs, err := s.Embedder.Embed(ctx, []string{e.Summary})
+	if err == nil && len(vs) != 1 {
+		err = fmt.Errorf("embedding returned %d vectors", len(vs))
+	}
+	var b []byte
+	if err == nil {
+		b, err = sqlitevec.SerializeFloat32(vs[0])
+	}
+	if err != nil {
+		slog.Warn("Diary summary not embedded; run diary normalize to backfill", "date", e.Date, "error", err)
+		return nil
+	}
+	return b
 }
 func (s *Service) Normalize(ctx context.Context, full bool) error {
 	if !s.mu.TryLock() {
@@ -351,7 +469,7 @@ func (s *Service) rebuild(ctx context.Context, full bool) error {
 	}
 	defer tx.Rollback()
 	// The derived index is swapped transactionally, retaining unchanged vectors on normalize.
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(`DROP TABLE IF EXISTS diary_fts;DROP TABLE IF EXISTS diary_vec;DROP TABLE IF EXISTS diary;CREATE TABLE diary(id INTEGER PRIMARY KEY AUTOINCREMENT,date TEXT NOT NULL,created TEXT,updated TEXT,keywords TEXT,summary TEXT,location TEXT,content TEXT NOT NULL,file_path TEXT NOT NULL UNIQUE);CREATE VIRTUAL TABLE diary_fts USING fts5(content,keywords,tokenize='trigram');CREATE VIRTUAL TABLE diary_vec USING vec0(id INTEGER PRIMARY KEY,embedding float[%d]);`, dim))
+	_, err = tx.ExecContext(ctx, "DROP TABLE IF EXISTS diary_fts;DROP TABLE IF EXISTS diary_vec;DROP TABLE IF EXISTS diary;"+schema(dim))
 	if err != nil {
 		return err
 	}

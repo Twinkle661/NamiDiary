@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -102,18 +103,24 @@ func TestPatchBoundariesAndFailedIndex(t *testing.T) {
 	hooks := 0
 	s.OnAdded = func(string) { hooks++ }
 	emb.Err = errors.New("provider unavailable")
-	if err := s.Add(ctx, "2026-01-10", WriteRequest{Content: "body", Meta: Meta{Summary: "summary"}}); err == nil {
-		t.Fatal("expected indexing error")
+	if err := s.Add(ctx, "2026-01-10", WriteRequest{Content: "body", Meta: Meta{Summary: "summary"}}); err != nil {
+		t.Fatalf("embedding failure must not reject the write: %v", err)
 	}
-	if hooks != 0 {
-		t.Fatal("hook called on error")
+	if hooks != 1 {
+		t.Fatal("dream not enqueued for an indexed entry without a vector")
 	}
-	if _, err := os.Stat(s.path("2026-01-10")); err != nil {
-		t.Fatal("source file lost")
+	if e, err := s.Get(ctx, "2026-01-10"); err != nil || e.Body != "body" {
+		t.Fatalf("entry without vector not readable: %+v %v", e, err)
 	}
 	emb.Err = nil
+	if out, err := s.Similar(ctx, SimilarRequest{UserMessage: "q"}); err != nil || len(out) != 0 {
+		t.Fatalf("missing vector should be skipped: %v %v", out, err)
+	}
 	if err := s.Normalize(ctx, false); err != nil {
 		t.Fatal(err)
+	}
+	if out, err := s.Similar(ctx, SimilarRequest{UserMessage: "q"}); err != nil || len(out) != 1 {
+		t.Fatalf("normalize did not backfill vector: %v %v", out, err)
 	}
 	now := s.Now()
 	s.Now = func() time.Time { return now.Add(24 * time.Hour) }
@@ -209,5 +216,54 @@ func TestSimilarWithoutSummaryVectors(t *testing.T) {
 	got, err := s.Similar(ctx, SimilarRequest{UserMessage: "query"})
 	if err != nil || len(got) != 0 {
 		t.Fatalf("empty vector index: %v %v", got, err)
+	}
+}
+
+func TestReadsUseIndexNotMarkdown(t *testing.T) {
+	s, _ := service(t)
+	ctx := context.Background()
+	for _, date := range []string{"2026-01-08", "2026-01-09"} {
+		if err := s.Add(ctx, date, WriteRequest{Content: "original " + date, Meta: Meta{Summary: "s"}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// External edits are invisible to reads until normalize; a broken file does not break reads.
+	if err := os.WriteFile(s.path("2026-01-08"), []byte("invalid"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := atomicWrite(s.path("2026-01-09"), []byte(Entry{Date: "2026-01-09", Created: "x", Updated: "x", Body: "edited"}.Markdown())); err != nil {
+		t.Fatal(err)
+	}
+	es, err := s.Latest(ctx, LatestQuery{N: 5})
+	if err != nil || len(es) != 2 || es[0].Body != "original 2026-01-08" || es[1].Body != "original 2026-01-09" {
+		t.Fatalf("latest %+v %v", es, err)
+	}
+	if e, err := s.Get(ctx, "2026-01-08"); err != nil || e.Summary != "s" || len(e.Keywords) != 0 {
+		t.Fatalf("get %+v %v", e, err)
+	}
+	requireCode(t, func() error { _, err := s.Get(ctx, "2026-01-07"); return err }(), "NOT_FOUND")
+}
+func TestOpenRebuildsMissingIndex(t *testing.T) {
+	s, emb := service(t)
+	ctx := context.Background()
+	if err := s.Add(ctx, "2026-01-09", WriteRequest{Content: "body", Meta: Meta{Summary: "summary"}}); err != nil {
+		t.Fatal(err)
+	}
+	s.DB.Close()
+	for _, suffix := range []string{"", "-wal", "-shm"} {
+		_ = os.Remove(filepath.Join(s.Dir, "diary.db"+suffix))
+	}
+	c := testutil.Config(t)
+	c.App.DataDir = s.Dir
+	r, err := Open(c, emb)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.DB.Close()
+	if e, err := r.Get(ctx, "2026-01-09"); err != nil || e.Body != "body" {
+		t.Fatalf("startup rebuild %+v %v", e, err)
+	}
+	if out, err := r.Similar(ctx, SimilarRequest{UserMessage: "q"}); err != nil || len(out) != 1 {
+		t.Fatalf("startup rebuild vectors %v %v", out, err)
 	}
 }

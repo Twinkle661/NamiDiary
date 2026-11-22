@@ -46,7 +46,7 @@ data/
 
 Markdown front matter contains `date`, `created`, `updated`, `keywords`, `summary`, and optional `location`. Legacy scalar keywords, YAML dates, and absent metadata are accepted. Get/latest return full Markdown; search/similar return `DATE-[keywords]summary` strings.
 
-If indexing fails after a write, the Markdown file is retained; run `POST /diary/normalize` to repair the index. Do not retry add blindly: the date now exists. Normalize reuses unchanged summary vectors. `POST /diary/init` forces fresh embeddings and never touches memory. Editing Markdown outside the service requires normalization for search to reflect those changes.
+Markdown is the source of truth, but only add/patch touch it; every read (get, latest, search, similar) is served from `diary.db`. If embedding fails during a write, the entry is still stored and readable but has no vector until `POST /diary/normalize` backfills it. Normalize reuses unchanged summary vectors. `POST /diary/init` forces fresh embeddings and never touches memory. Editing Markdown outside the service requires normalization before any read reflects those changes.
 
 Memory lives in a separate database. Every worker-controlled committed change writes a CSV snapshot. Memory restore validates both CSV files, takes a safety snapshot, then replaces the library atomically, preserving ids. A missing `memory.db` is restored from the newest snapshot on startup; an existing corrupt database is not silently replaced. Keep the whole data directory backed up, including Markdown; memory CSVs do not contain diary bodies.
 
@@ -197,7 +197,7 @@ The image runs as `1000:100` on Debian with CA certificates and timezone data. C
 ## Migration
 
 1. Copy the old `data/diary/` tree into the new `data/` directory.
-2. Configure providers and start the service. An old/missing embedding status triggers rebuild on the first diary write; alternatively call `POST /diary/normalize` or `POST /diary/init` explicitly.
+2. Configure providers and start the service. A missing `diary.db` or an old/missing embedding status triggers an index rebuild from Markdown at startup (startup fails if the embedding provider is unreachable); `POST /diary/normalize` or `POST /diary/init` remain available explicitly.
 3. Optionally seed memory with `POST /memory/init?recent=N`, then poll status.
 4. `notesValues.json` is unused. There is no notes migration.
 5. Replace `/prompt` callers with session-start `/context/static` and per-message `/context/dynamic`.
