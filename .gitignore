@@ -1,0 +1,10 @@
+config.yml
+.env*
+!.env.example
+data/
+!docker_compose/copy-this-and-rename/data/
+docker_compose/copy-this-and-rename/data/*
+!docker_compose/copy-this-and-rename/data/.gitkeep
+/bin/
+/coverage.out
+/deployment/

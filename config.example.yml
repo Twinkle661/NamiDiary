@@ -1,0 +1,66 @@
+app:
+  port: 8188
+  # api_key: set NAMIDIARY_API_KEY instead
+  debug: false
+  data_dir: ./data          # diary/, diary.db, dbStatus.json, memory.db, memory/
+  timezone: UTC             # IANA name; used for date checks and "today" in prompts
+
+mcp:
+  allowed_hosts: [localhost, 127.0.0.1, "[::1]"]
+  allowed_origins: [localhost, 127.0.0.1, "[::1]"]
+
+diary:
+  search_limit: 20          # default limit for /diary/search
+  latest_max: 31            # upper bound for /diary/latest?recent
+  similar_limit: 15         # results returned by /diary/similar
+  similar_query_max_chars: 4000   # query text is truncated from the head, keeping the tail
+  patch_window: 24h         # patch fails if the latest entry was created longer ago than this
+  future_window: 24h        # add fails if the date starts later than now + this
+  embedding:
+    base_url: https://openrouter.ai/api/v1   # client calls {base_url}/embeddings
+    model: qwen/qwen3-embedding-8b
+    dimensions: 1024        # fallback only, when no vector exists to infer dimensions
+    batch_size: 64
+    concurrency: 4
+    timeout: 30s
+    # api_key: set EMBEDDING_API_KEY instead
+
+context:
+  static:
+    default_recent: 7       # used when ?recent is omitted
+    max_recent: 60          # upper bound for ?recent
+
+memory:
+  entry_max_chars: 200      # counted in Unicode code points (runes)
+  language: ""              # optional, e.g. "Chinese"; empty = follow the diaries' language
+  names:                    # optional display names used ONLY inside prompts
+    agent: ""               # empty → "the agent"
+    user: ""                # empty → "the user"
+  limits:
+    profile:    { max_entries: 30 }
+    preference: { max_entries: 30 }
+    people:     { max_topics: 20, max_entries: 20 }
+    area:       { max_topics: 15, max_entries: 20 }
+    project:    { max_topics: 7,  max_entries: 15 }
+  dream:
+    context_diaries: 3      # how many latest diaries (full text + front matter) the dream sees
+  maintenance:
+    interval: 0s            # periodic normalize; 0 disables the timer
+  backup:
+    retention:
+      policy: max_age       # pluggable, see §7.6.3
+      max_age: 168h         # 7 days
+  llm:
+    base_url: https://openrouter.ai/api/v1   # client calls {base_url}/chat/completions
+    model: google/gemini-2.5-flash           # example only
+    temperature: 0.2
+    max_tokens: 8192
+    timeout: 180s
+    json_mode: true         # send response_format {"type":"json_object"}
+    max_attempts: 3         # per agent call, including the first
+    # api_key: set LLM_API_KEY instead
+    agents:                 # optional per-agent overrides; empty = inherit
+      dream:   { model: "", temperature: null }
+      archive: { model: "", temperature: null }
+      compact: { model: "", temperature: null }
+  prompts_dir: ""           # optional; if set, files here override embedded prompts by name

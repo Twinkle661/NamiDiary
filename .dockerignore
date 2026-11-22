@@ -1,0 +1,11 @@
+.git
+.agents
+.codex
+.aws
+.env*
+config.yml
+data
+bin
+docker_compose/copy-this-and-rename
+coverage.out
+PRD.md
