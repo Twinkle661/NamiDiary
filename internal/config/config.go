@@ -40,6 +40,7 @@ type Diary struct {
 	SimilarQueryMaxChars int           `yaml:"similar_query_max_chars"`
 	PatchWindow          time.Duration `yaml:"patch_window"`
 	FutureWindow         time.Duration `yaml:"future_window"`
+	ActiveNormalize      bool          `yaml:"active_normalize"`
 	Embedding            Embedding     `yaml:"embedding"`
 }
 type Limit struct {
@@ -130,7 +131,7 @@ func Defaults() Config {
 	var c Config
 	c.App = App{Port: 8188, DataDir: "./data", Timezone: "UTC"}
 	c.MCP = MCP{[]string{"localhost", "127.0.0.1", "[::1]"}, []string{"localhost", "127.0.0.1", "[::1]"}}
-	c.Diary = Diary{20, 31, 15, 4000, 24 * time.Hour, 24 * time.Hour, Embedding{BaseURL: "https://openrouter.ai/api/v1", Model: "qwen/qwen3-embedding-8b", Dimensions: 1024, BatchSize: 64, Concurrency: 4, Timeout: 30 * time.Second}}
+	c.Diary = Diary{SearchLimit: 20, LatestMax: 31, SimilarLimit: 15, SimilarQueryMaxChars: 4000, PatchWindow: 24 * time.Hour, FutureWindow: 24 * time.Hour, ActiveNormalize: true, Embedding: Embedding{BaseURL: "https://openrouter.ai/api/v1", Model: "qwen/qwen3-embedding-8b", Dimensions: 1024, BatchSize: 64, Concurrency: 4, Timeout: 30 * time.Second}}
 	c.Context.Static.DefaultRecent = 7
 	c.Context.Static.MaxRecent = 60
 	c.Memory.EntryMaxChars = 200

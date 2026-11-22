@@ -267,3 +267,61 @@ func TestOpenRebuildsMissingIndex(t *testing.T) {
 		t.Fatalf("startup rebuild vectors %v %v", out, err)
 	}
 }
+
+func TestActiveNormalize(t *testing.T) {
+	for _, active := range []bool{true, false} {
+		s, _ := service(t)
+		s.Config.ActiveNormalize = active
+		ctx := context.Background()
+		if err := s.Add(ctx, "2026-01-08", WriteRequest{Content: "original"}); err != nil {
+			t.Fatal(err)
+		}
+		if err := atomicWrite(s.path("2026-01-08"), []byte(Entry{Date: "2026-01-08", Created: "x", Updated: "x", Body: "edited"}.Markdown())); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.Add(ctx, "2026-01-09", WriteRequest{Content: "next"}); err != nil {
+			t.Fatal(err)
+		}
+		e, err := s.Get(ctx, "2026-01-08")
+		want := map[bool]string{true: "edited", false: "original"}[active]
+		if err != nil || e.Body != want {
+			t.Fatalf("active=%v: got %q %v", active, e.Body, err)
+		}
+		// A broken external file must not fail the write when active normalize runs.
+		if err := os.WriteFile(s.path("2026-01-08"), []byte("invalid"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.Patch(ctx, WriteRequest{Content: "more"}); err != nil {
+			t.Fatalf("active=%v patch: %v", active, err)
+		}
+		if e, err := s.Get(ctx, "2026-01-09"); err != nil || e.Body != "next\n\n---\n\nmore" {
+			t.Fatalf("active=%v patched row %q %v", active, e.Body, err)
+		}
+	}
+}
+func TestOpenActiveNormalizeSyncsEdits(t *testing.T) {
+	s, emb := service(t)
+	ctx := context.Background()
+	if err := s.Add(ctx, "2026-01-09", WriteRequest{Content: "original"}); err != nil {
+		t.Fatal(err)
+	}
+	s.DB.Close()
+	if err := atomicWrite(s.path("2026-01-09"), []byte(Entry{Date: "2026-01-09", Created: "x", Updated: "x", Body: "edited"}.Markdown())); err != nil {
+		t.Fatal(err)
+	}
+	for _, active := range []bool{false, true} {
+		c := testutil.Config(t)
+		c.App.DataDir = s.Dir
+		c.Diary.ActiveNormalize = active
+		r, err := Open(c, emb)
+		if err != nil {
+			t.Fatal(err)
+		}
+		e, err := r.Get(ctx, "2026-01-09")
+		r.DB.Close()
+		want := map[bool]string{true: "edited", false: "original"}[active]
+		if err != nil || e.Body != want {
+			t.Fatalf("active=%v: got %q %v", active, e.Body, err)
+		}
+	}
+}

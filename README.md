@@ -46,7 +46,7 @@ data/
 
 Markdown front matter contains `date`, `created`, `updated`, `keywords`, `summary`, and optional `location`. Legacy scalar keywords, YAML dates, and absent metadata are accepted. Get/latest return full Markdown; search/similar return `DATE-[keywords]summary` strings.
 
-Markdown is the source of truth, but only add/patch touch it; every read (get, latest, search, similar) is served from `diary.db`. If embedding fails during a write, the entry is still stored and readable but has no vector until `POST /diary/normalize` backfills it. Normalize reuses unchanged summary vectors. `POST /diary/init` forces fresh embeddings and never touches memory. Editing Markdown outside the service requires normalization before any read reflects those changes.
+Markdown is the source of truth, but only add/patch touch it; every read (get, latest, search, similar) is served from `diary.db`. If embedding fails during a write, the entry is still stored and readable but has no vector until `POST /diary/normalize` backfills it. Normalize reuses unchanged summary vectors. `POST /diary/init` forces fresh embeddings and never touches memory. With `diary.active_normalize` (default `true`) the index is also re-synced from Markdown at startup and after every add/patch, reusing unchanged vectors, so external edits appear after the next restart or write; set it to `false` to have writes upsert only their own row. Either way, `POST /diary/normalize` makes external edits visible immediately.
 
 Memory lives in a separate database. Every worker-controlled committed change writes a CSV snapshot. Memory restore validates both CSV files, takes a safety snapshot, then replaces the library atomically, preserving ids. A missing `memory.db` is restored from the newest snapshot on startup; an existing corrupt database is not silently replaced. Keep the whole data directory backed up, including Markdown; memory CSVs do not contain diary bodies.
 
@@ -73,6 +73,7 @@ Every scalar has a `NAMIDIARY_` environment name using double underscores betwee
 | `diary.similar_query_max_chars` | `4000` | `NAMIDIARY_DIARY__SIMILAR_QUERY_MAX_CHARS` |
 | `diary.patch_window` | `24h0m0s` | `NAMIDIARY_DIARY__PATCH_WINDOW` |
 | `diary.future_window` | `24h0m0s` | `NAMIDIARY_DIARY__FUTURE_WINDOW` |
+| `diary.active_normalize` | `true` | `NAMIDIARY_DIARY__ACTIVE_NORMALIZE` |
 | `diary.embedding.base_url` | `https://openrouter.ai/api/v1` | `NAMIDIARY_DIARY__EMBEDDING__BASE_URL` |
 | `diary.embedding.model` | `qwen/qwen3-embedding-8b` | `NAMIDIARY_DIARY__EMBEDDING__MODEL` |
 | `diary.embedding.api_key` | `required secret` | `NAMIDIARY_DIARY__EMBEDDING__API_KEY` |
@@ -197,7 +198,7 @@ The image runs as `1000:100` on Debian with CA certificates and timezone data. C
 ## Migration
 
 1. Copy the old `data/diary/` tree into the new `data/` directory.
-2. Configure providers and start the service. A missing `diary.db` or an old/missing embedding status triggers an index rebuild from Markdown at startup (startup fails if the embedding provider is unreachable); `POST /diary/normalize` or `POST /diary/init` remain available explicitly.
+2. Configure providers and start the service. A missing `diary.db`, an old/missing embedding status, or `diary.active_normalize` triggers an index rebuild from Markdown at startup (startup fails if the embedding provider is unreachable); `POST /diary/normalize` or `POST /diary/init` remain available explicitly.
 3. Optionally seed memory with `POST /memory/init?recent=N`, then poll status.
 4. `notesValues.json` is unused. There is no notes migration.
 5. Replace `/prompt` callers with session-start `/context/static` and per-message `/context/dynamic`.

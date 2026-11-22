@@ -61,8 +61,8 @@ func schema(dim int) string {
 	return fmt.Sprintf(`CREATE TABLE IF NOT EXISTS diary(id INTEGER PRIMARY KEY AUTOINCREMENT,date TEXT NOT NULL,created TEXT,updated TEXT,keywords TEXT,summary TEXT,location TEXT,content TEXT NOT NULL,file_path TEXT NOT NULL UNIQUE);CREATE INDEX IF NOT EXISTS diary_date ON diary(date);CREATE VIRTUAL TABLE IF NOT EXISTS diary_fts USING fts5(content,keywords,tokenize='trigram');CREATE VIRTUAL TABLE IF NOT EXISTS diary_vec USING vec0(id INTEGER PRIMARY KEY,embedding float[%d]);`, dim)
 }
 
-// Open prepares the derived index. A new database or a stale embedding status
-// triggers one Markdown scan so reads can be served from SQL afterwards.
+// Open prepares the derived index. A new database, a stale embedding status or
+// active normalize triggers one Markdown scan so reads can be served from SQL afterwards.
 func Open(c config.Config, emb Embedder) (*Service, error) {
 	if err := os.MkdirAll(filepath.Join(c.App.DataDir, "diary"), 0700); err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func Open(c config.Config, emb Embedder) (*Service, error) {
 		db.Close()
 		return nil, err
 	}
-	if fresh || !s.validStatus() {
+	if fresh || s.Config.ActiveNormalize || !s.validStatus() {
 		if err = s.rebuild(context.Background(), false); err != nil {
 			db.Close()
 			return nil, fmt.Errorf("diary index rebuild: %w", err)
@@ -244,6 +244,7 @@ func (s *Service) Add(ctx context.Context, date string, r WriteRequest) error {
 	if err := s.index(ctx, e, true); err != nil {
 		return err
 	}
+	s.activeNormalize(ctx)
 	if s.OnAdded != nil {
 		s.OnAdded(date)
 	}
@@ -291,7 +292,22 @@ func (s *Service) Patch(ctx context.Context, r WriteRequest) error {
 	if err = atomicWrite(e.FilePath, []byte(e.Markdown())); err != nil {
 		return err
 	}
-	return s.index(ctx, e, e.Summary != oldSummary)
+	if err = s.index(ctx, e, e.Summary != oldSummary); err != nil {
+		return err
+	}
+	s.activeNormalize(ctx)
+	return nil
+}
+
+// activeNormalize runs after the entry's own row is indexed, so a failure here
+// only means other external edits stay unsynced; the write itself has succeeded.
+func (s *Service) activeNormalize(ctx context.Context) {
+	if !s.Config.ActiveNormalize {
+		return
+	}
+	if err := s.rebuild(ctx, false); err != nil {
+		slog.Warn("Active diary normalize failed; the written entry is indexed", "error", err)
+	}
 }
 
 // index upserts one entry into the derived tables. When reembed is set, the old
