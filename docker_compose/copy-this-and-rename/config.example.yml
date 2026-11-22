@@ -16,6 +16,7 @@ diary:
   similar_query_max_chars: 4000   # query text is truncated from the head, keeping the tail
   patch_window: 24h         # patch fails if the latest entry was created longer ago than this
   future_window: 24h        # add fails if the date starts later than now + this
+  active_normalize: true    # re-sync the index from Markdown at startup and after every add/patch
   embedding:
     base_url: https://openrouter.ai/api/v1   # client calls {base_url}/embeddings
     model: qwen/qwen3-embedding-8b
