@@ -110,7 +110,7 @@ func New(a *rest.API, version string) (*sdk.Server, http.Handler) {
 			readOnly = true
 		}
 		if strings.HasPrefix(name, "memory_") {
-			description += fmt.Sprintf("\nEntries are short facts, at most %d Unicode characters.\ncore: fixed profile (agent) and preference (user).\npeople: a specific other person.\narea: an ongoing domain without an end date.\nproject: a goal with an endpoint.", a.Config.Memory.EntryMaxChars)
+			description += fmt.Sprintf("\nEntries are short facts, at most %d Unicode characters.\ncore: fixed profile (who the user is) and preference (the user's tastes, habits and agreements).\npeople: a specific other person.\narea: an ongoing domain without an end date.\nproject: a goal with an endpoint.", a.Config.Memory.EntryMaxChars)
 		}
 		description += " A busy error means retry in a moment."
 		props := map[string]any{}

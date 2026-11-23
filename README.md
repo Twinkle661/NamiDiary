@@ -156,7 +156,7 @@ Errors use `{"status":"error","code":"...","message":"...","details":{...}}`. De
 
 ## Memory model and concurrency
 
-- **core:** fixed `profile` (agent identity and agreements) and `preference` (user facts/preferences); never deleted.
+- **core:** fixed `profile` (who the user is) and `preference` (the user's tastes, habits, how they want to be treated, and agent–user agreements); never deleted.
 - **people:** one topic per other person.
 - **area:** ongoing domain with no endpoint.
 - **project:** a finite goal; completion marks it for distillation into area topics.
