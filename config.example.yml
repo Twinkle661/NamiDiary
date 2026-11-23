@@ -1,6 +1,6 @@
 app:
   port: 8188
-  # api_key: set NAMIDIARY_API_KEY instead
+  # api_key: set NAMIDIARY_APP__API_KEY instead
   debug: false
   data_dir: ./data          # diary/, diary.db, dbStatus.json, memory.db, memory/
   timezone: UTC             # IANA name; used for date checks and "today" in prompts
@@ -24,7 +24,7 @@ diary:
     batch_size: 64
     concurrency: 4
     timeout: 30s
-    # api_key: set EMBEDDING_API_KEY instead
+    # api_key: set NAMIDIARY_DIARY__EMBEDDING__API_KEY instead
 
 context:
   static:
@@ -59,7 +59,7 @@ memory:
     timeout: 180s
     json_mode: true         # send response_format {"type":"json_object"}
     max_attempts: 3         # per agent call, including the first
-    # api_key: set LLM_API_KEY instead
+    # api_key: set NAMIDIARY_MEMORY__LLM__API_KEY instead
     agents:                 # optional per-agent overrides; empty = inherit
       dream:   { model: "", temperature: null }
       archive: { model: "", temperature: null }

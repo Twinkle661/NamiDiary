@@ -19,13 +19,13 @@ make build
 The default listener is port 8188. Set the same API token in your client environment before using the examples:
 
 ```sh
-export NAMIDIARY_API_KEY='your-configured-api-token'
+export NAMIDIARY_APP__API_KEY='your-configured-api-token'
 curl http://localhost:8188/healthz
-curl -H "Authorization: Bearer $NAMIDIARY_API_KEY" \
+curl -H "Authorization: Bearer $NAMIDIARY_APP__API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{"content":"A diary entry.","meta":{"keywords":["reading"],"summary":"A day spent reading.","location":"Home"}}' \
   http://localhost:8188/diary/2026-01-01
-curl -H "Authorization: Bearer $NAMIDIARY_API_KEY" \
+curl -H "Authorization: Bearer $NAMIDIARY_APP__API_KEY" \
   'http://localhost:8188/context/static?recent=7'
 ```
 
@@ -56,7 +56,7 @@ Snapshot I/O failures are surfaced after the committed memory change; the SQL co
 
 Precedence: process environment > `.env` > YAML > defaults. Missing YAML is allowed when all required secrets/settings are supplied elsewhere. Configuration is read once at startup. Invalid fields are reported together. `NAMIDIARY_CONFIG` selects YAML (default `./config.yml`); `NAMIDIARY_ENV_FILE` selects dotenv (default `./.env`). Dotenv supports comments, `KEY=VALUE`, and quoted values; it never overwrites an existing environment variable.
 
-Every scalar has a `NAMIDIARY_` environment name using double underscores between path segments. Lists use comma-separated values. Durations use Go notation, such as `90m` or `24h`. Prefer short secret aliases: `NAMIDIARY_API_KEY`, `EMBEDDING_API_KEY`, and `LLM_API_KEY`. At equal source priority they take precedence over their long aliases. Optional display names appear only in generated prompts; leave them empty to use neutral roles.
+Every scalar has a `NAMIDIARY_` environment name using double underscores between path segments. Lists use comma-separated values. Durations use Go notation, such as `90m` or `24h`. Optional display names appear only in generated prompts; leave them empty to use neutral roles.
 
 | YAML key | Default | Environment override |
 |---|---|---|
