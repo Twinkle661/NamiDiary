@@ -56,7 +56,7 @@ Snapshot I/O failures are surfaced after the committed memory change; the SQL co
 
 Precedence: process environment > `.env` > YAML > defaults. Missing YAML is allowed when all required secrets/settings are supplied elsewhere. Configuration is read once at startup. Invalid fields are reported together. `NAMIDIARY_CONFIG` selects YAML (default `./config.yml`); `NAMIDIARY_ENV_FILE` selects dotenv (default `./.env`). Dotenv supports comments, `KEY=VALUE`, and quoted values; it never overwrites an existing environment variable.
 
-Every scalar has a `NAMIDIARY_` environment name using double underscores between path segments. Lists use comma-separated values. Durations use Go notation, such as `90m` or `24h`. Prefer short secret aliases: `NAMIDIARY_API_KEY`, `EMBEDDING_API_KEY`, and `LLM_API_KEY`. At equal source priority they take precedence over their long aliases. Optional display names appear only in generated prompts; leave them empty to use neutral roles.
+Every scalar has a `NAMIDIARY_` environment name using double underscores between path segments. Lists use comma-separated values. Durations use Go notation, such as `90m` or `24h`. Prefer short secret aliases: `NAMIDIARY_API_KEY`, `NAMIDIARY_EMBEDDING_API_KEY`, and `NAMIDIARY_LLM_API_KEY`. At equal source priority they take precedence over their long aliases. Optional display names appear only in generated prompts; leave them empty to use neutral roles.
 
 | YAML key | Default | Environment override |
 |---|---|---|

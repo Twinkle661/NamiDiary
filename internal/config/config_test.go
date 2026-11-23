@@ -65,8 +65,8 @@ func TestYAMLDurationAndMissingFiles(t *testing.T) {
 	t.Setenv("NAMIDIARY_CONFIG", filepath.Join(dir, "missing.yml"))
 	t.Setenv("NAMIDIARY_ENV_FILE", filepath.Join(dir, "missing.env"))
 	t.Setenv("NAMIDIARY_API_KEY", "api")
-	t.Setenv("EMBEDDING_API_KEY", "embedding")
-	t.Setenv("LLM_API_KEY", "llm")
+	t.Setenv("NAMIDIARY_EMBEDDING_API_KEY", "embedding")
+	t.Setenv("NAMIDIARY_LLM_API_KEY", "llm")
 	c, err := Load()
 	if err != nil || c.App.Port != 8188 {
 		t.Fatalf("defaults %v", err)
@@ -95,8 +95,8 @@ func TestProcessLongSecretBeatsDotenvShortAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("NAMIDIARY_APP__API_KEY", "process-long-secret")
-	t.Setenv("EMBEDDING_API_KEY", "embedding")
-	t.Setenv("LLM_API_KEY", "llm")
+	t.Setenv("NAMIDIARY_EMBEDDING_API_KEY", "embedding")
+	t.Setenv("NAMIDIARY_LLM_API_KEY", "llm")
 	c, err := Load()
 	if err != nil || c.App.APIKey != "process-long-secret" {
 		t.Fatalf("precedence %v %s", err, c.Masked())

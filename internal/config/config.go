@@ -193,8 +193,8 @@ func Load() (Config, error) {
 		errs = append(errs, err.Error())
 	}
 	walk(reflect.ValueOf(&c).Elem(), nil, &errs)
-	for key, dst := range map[string]*string{"NAMIDIARY_API_KEY": &c.App.APIKey, "EMBEDDING_API_KEY": &c.Diary.Embedding.APIKey, "LLM_API_KEY": &c.Memory.LLM.APIKey} {
-		longKey := map[string]string{"NAMIDIARY_API_KEY": "NAMIDIARY_APP__API_KEY", "EMBEDDING_API_KEY": "NAMIDIARY_DIARY__EMBEDDING__API_KEY", "LLM_API_KEY": "NAMIDIARY_MEMORY__LLM__API_KEY"}[key]
+	for key, dst := range map[string]*string{"NAMIDIARY_API_KEY": &c.App.APIKey, "NAMIDIARY_EMBEDDING_API_KEY": &c.Diary.Embedding.APIKey, "NAMIDIARY_LLM_API_KEY": &c.Memory.LLM.APIKey} {
+		longKey := map[string]string{"NAMIDIARY_API_KEY": "NAMIDIARY_APP__API_KEY", "NAMIDIARY_EMBEDDING_API_KEY": "NAMIDIARY_DIARY__EMBEDDING__API_KEY", "NAMIDIARY_LLM_API_KEY": "NAMIDIARY_MEMORY__LLM__API_KEY"}[key]
 		if v, ok := os.LookupEnv(key); ok && (originalEnv[key] || !originalEnv[longKey]) {
 			*dst = v
 		}
