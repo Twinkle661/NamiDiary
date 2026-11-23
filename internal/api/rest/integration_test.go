@@ -100,7 +100,7 @@ func TestFullServer(t *testing.T) {
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
-	for path, want := range map[string]string{"/memory/entries": "A durable memory", "/context/static": "core_memory", "/diary/latest": "location: City", "/diary/latest?recent=3": "2026-01-01-[]reading\n2026-01-03-[]reading\n2026-01-05-[]reading"} {
+	for path, want := range map[string]string{"/memory/entries": "A durable memory", "/context/static": "core_memory", "/diary/latest": "location: City", "/diary/latest?recent=3": `"2026-01-01-[]reading\n2026-01-03-[]reading\n2026-01-05-[]reading"`} {
 		status, body := request("GET", path, "", true)
 		if status != 200 || !strings.Contains(body, want) {
 			t.Fatalf("%s: %d %s", path, status, body)
