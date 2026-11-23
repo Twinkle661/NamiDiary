@@ -50,6 +50,7 @@ type Limit struct {
 type Limits struct {
 	Profile    Limit `yaml:"profile" json:"profile"`
 	Preference Limit `yaml:"preference" json:"preference"`
+	Self       Limit `yaml:"self" json:"self"`
 	People     Limit `yaml:"people" json:"people"`
 	Area       Limit `yaml:"area" json:"area"`
 	Project    Limit `yaml:"project" json:"project"`
@@ -64,8 +65,11 @@ func (l Limits) For(kind, topic string) Limit {
 	case "project":
 		return l.Project
 	default:
-		if topic == "profile" {
+		switch topic {
+		case "profile":
 			return l.Profile
+		case "self":
+			return l.Self
 		}
 		return l.Preference
 	}
@@ -139,7 +143,7 @@ func Defaults() Config {
 	c.Context.Static.MaxRecent = 60
 	c.Context.Dynamic.MaxLimit = 60
 	c.Memory.EntryMaxChars = 200
-	c.Memory.Limits = Limits{Limit{MaxEntries: 30}, Limit{MaxEntries: 30}, Limit{20, 20}, Limit{15, 20}, Limit{7, 15}}
+	c.Memory.Limits = Limits{Profile: Limit{MaxEntries: 30}, Preference: Limit{MaxEntries: 30}, Self: Limit{MaxEntries: 20}, People: Limit{20, 20}, Area: Limit{15, 20}, Project: Limit{7, 15}}
 	c.Memory.Dream.ContextDiaries = 3
 	c.Memory.Backup.Retention = Retention{"max_age", 168 * time.Hour}
 	c.Memory.LLM = LLM{BaseURL: "https://openrouter.ai/api/v1", Model: "google/gemini-2.5-flash", Temperature: 0.2, MaxTokens: 8192, Timeout: 180 * time.Second, JSONMode: true, MaxAttempts: 3}
@@ -279,10 +283,10 @@ func (c Config) Validate() []string {
 	}
 	check(c.Context.Static.DefaultRecent >= 0 && c.Context.Static.DefaultRecent <= c.Context.Static.MaxRecent, "context.static.default_recent out of bounds")
 	check(c.Memory.EntryMaxChars >= 20 && c.Memory.EntryMaxChars <= 2000, "memory.entry_max_chars must be in 20..2000")
-	for _, k := range []string{"profile", "preference", "people", "area", "project"} {
+	for _, k := range []string{"profile", "preference", "self", "people", "area", "project"} {
 		l := c.Memory.Limits.For(k, k)
 		check(l.MaxEntries > 0, "memory.limits."+k+".max_entries must be positive")
-		if k != "profile" && k != "preference" {
+		if k != "profile" && k != "preference" && k != "self" {
 			check(l.MaxTopics > 0, "memory.limits."+k+".max_topics must be positive")
 		}
 	}

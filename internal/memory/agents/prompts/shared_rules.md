@@ -2,16 +2,18 @@
 
 Memory is organised into topics. Every topic has a kind:
 
-- core — exactly two topics that always exist:
-  - "profile": facts about {{.AgentName}} itself — identity, self-understanding, its own principles, and agreements between {{.AgentName}} and {{.UserName}}.
-  - "preference": facts about {{.UserName}} — identity, background, tastes, habits, and how {{.UserName}} wants to be treated.
-  No other core topics can exist.
+- core — exactly three topics that always exist:
+  - "profile": who {{.UserName}} is — identity, background, occupation, where they live, life circumstances.
+  - "preference": what {{.UserName}} likes and how they want things — tastes, habits, routines, how {{.UserName}} wants to be treated, and standing agreements between {{.AgentName}} and {{.UserName}}.
+  - "self": who {{.AgentName}} is — {{.AgentName}}'s own identity, self-understanding, values and principles as they develop.
+  No other core topics can exist. Facts about {{.UserName}} never go in "self"; facts about {{.AgentName}} never go in "profile" or "preference".
 - people — one topic per specific person other than {{.AgentName}} and {{.UserName}}. Use the name {{.AgentName}} uses for them as the topic name; put other names in aliases.
 - area — an open-ended domain of life with no end point (a career, a field of study, a long-term hobby). Updated in place, never archived.
 - project — something with a goal and an end point (an exam, a thesis, a job search, a move).
 
 ## How to write entries
 
+- The diaries are written by {{.AgentName}} in the first person: "I" and "me" mean {{.AgentName}}. In entries, always use names ({{.AgentName}}, {{.UserName}}, or the person's name), never first- or second-person pronouns.
 - Each entry is one durable fact, at most {{.EntryMaxChars}} characters.
 - Facts, not events. Write "A colleague is {{.UserName}}'s supervisor", not "Today we talked about a colleague".
 - Entries must stand alone: name the subject, avoid pronouns without referents, and avoid relative time ("yesterday", "last week"). Use absolute dates (e.g. "since 2026-11") when timing matters.
@@ -30,11 +32,24 @@ Each entry has "updated_by":
 
 Treat "user" and "agent" entries as authoritative. Do not drop them. Update them only when a diary explicitly contradicts or updates the fact, and then keep their wording as far as possible. "dream" entries may be revised freely.
 
+## Input
+
+Your input is one message made of tagged sections. Depending on your task it contains some of:
+- <today>: the current date (yyyy-MM-dd).
+- <limits>: per-kind limits (max_topics, max_entries) and entry_max_chars.
+- <counts>: current topic and entry counts per kind.
+- <memory_library>: JSON list of topics: topic, kind, aliases, archived, and entries (id, content, sources, updated, updated_by).
+- <diaries>: diary entries, oldest first, each as <diary date="yyyy-MM-dd"> with YAML front matter and body.
+- <violations>: limits that are currently exceeded.
+
+A topic whose "archived" is not null is a finished project and is read-only: never add to it.
+
 ## Output
 
 Return only a JSON object: {"actions": [ ... ]}. An empty list is valid when nothing needs to change.
 Action shapes:
-  {"op":"add","topic":"…","kind":"people|area|project|core","content":"…","sources":["yyyy-MM-dd"],"aliases":["…"]}   (kind and aliases only matter when creating a new topic)
+  {"op":"add","topic":"…","content":"…","sources":["yyyy-MM-dd"]}   (add to an existing topic, including profile and preference: no kind, no aliases)
+  {"op":"add","topic":"…","kind":"people|area|project","content":"…","sources":["yyyy-MM-dd"],"aliases":["…"]}   (create a new topic: kind is required, aliases optional; kind can never be core)
   {"op":"update","id":123,"content":"…","sources":["yyyy-MM-dd"]}
   {"op":"drop","id":123}
   {"op":"set_topic","topic":"…","aliases":["…"]}

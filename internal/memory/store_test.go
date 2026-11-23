@@ -29,7 +29,7 @@ func TestAtomicActionsAndCleanup(t *testing.T) {
 		t.Fatal("failed batch reports changed")
 	}
 	l, _ := s.Library(ctx)
-	if len(l) != 2 || len(l[0].Entries) != 0 {
+	if len(l) != len(memory.CoreTopics) || len(l[0].Entries) != 0 {
 		t.Fatal("partial batch committed")
 	}
 	r, err := s.Apply(ctx, memory.Agent, []memory.Action{add}, memory.ApplyOptions{})
@@ -60,7 +60,7 @@ func TestAtomicActionsAndCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 	l, _ = s.Library(ctx)
-	if len(l) != 2 {
+	if len(l) != len(memory.CoreTopics) {
 		t.Fatal("empty topic retained")
 	}
 }
@@ -128,7 +128,7 @@ func TestPostCheckRollbackAndReadOrdering(t *testing.T) {
 	if string(a) != string(b) {
 		t.Fatal("postcheck committed")
 	}
-	if after[2].Topic != "Alpha" || after[3].Topic != "zeta" {
+	if n := len(memory.CoreTopics); after[n].Topic != "Alpha" || after[n+1].Topic != "zeta" {
 		t.Fatal("kind order")
 	}
 	selected, err := after.Select([]string{"ALIAS", "Alpha"})

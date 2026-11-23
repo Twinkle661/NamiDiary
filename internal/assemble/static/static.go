@@ -46,7 +46,7 @@ func Recent(d *diary.Service, n int) Section {
 func Core(lib memory.Library) Section {
 	return func(context.Context) (string, error) {
 		parts := []string{}
-		for _, name := range []string{"profile", "preference"} {
+		for _, name := range memory.CoreTopics {
 			idx := lib.Resolve(name)
 			if idx < 0 || len(lib[idx].Entries) == 0 {
 				continue

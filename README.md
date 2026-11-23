@@ -92,6 +92,8 @@ Every scalar has a `NAMIDIARY_` environment name using double underscores betwee
 | `memory.limits.profile.max_entries` | `30` | `NAMIDIARY_MEMORY__LIMITS__PROFILE__MAX_ENTRIES` |
 | `memory.limits.preference.max_topics` | `0` | `NAMIDIARY_MEMORY__LIMITS__PREFERENCE__MAX_TOPICS` |
 | `memory.limits.preference.max_entries` | `30` | `NAMIDIARY_MEMORY__LIMITS__PREFERENCE__MAX_ENTRIES` |
+| `memory.limits.self.max_topics` | `0` | `NAMIDIARY_MEMORY__LIMITS__SELF__MAX_TOPICS` |
+| `memory.limits.self.max_entries` | `20` | `NAMIDIARY_MEMORY__LIMITS__SELF__MAX_ENTRIES` |
 | `memory.limits.people.max_topics` | `20` | `NAMIDIARY_MEMORY__LIMITS__PEOPLE__MAX_TOPICS` |
 | `memory.limits.people.max_entries` | `20` | `NAMIDIARY_MEMORY__LIMITS__PEOPLE__MAX_ENTRIES` |
 | `memory.limits.area.max_topics` | `15` | `NAMIDIARY_MEMORY__LIMITS__AREA__MAX_TOPICS` |
@@ -156,7 +158,7 @@ Errors use `{"status":"error","code":"...","message":"...","details":{...}}`. De
 
 ## Memory model and concurrency
 
-- **core:** fixed `profile` (agent identity and agreements) and `preference` (user facts/preferences); never deleted.
+- **core:** fixed `profile` (who the user is), `preference` (the user's tastes, habits, how they want to be treated, and agent–user agreements) and `self` (the agent's own identity, self-understanding and principles); never deleted.
 - **people:** one topic per other person.
 - **area:** ongoing domain with no endpoint.
 - **project:** a finite goal; completion marks it for distillation into area topics.

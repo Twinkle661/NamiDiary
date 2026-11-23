@@ -42,6 +42,7 @@ memory:
   limits:
     profile:    { max_entries: 30 }
     preference: { max_entries: 30 }
+    self:       { max_entries: 20 }
     people:     { max_topics: 20, max_entries: 20 }
     area:       { max_topics: 15, max_entries: 20 }
     project:    { max_topics: 7,  max_entries: 15 }

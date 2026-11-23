@@ -28,7 +28,7 @@ func Open(path string, c config.Memory) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS memory_topic(topic TEXT PRIMARY KEY,kind TEXT NOT NULL CHECK(kind IN ('core','people','area','project')),aliases TEXT NOT NULL DEFAULT '[]',archived TEXT DEFAULT NULL,CHECK(archived IS NULL OR kind='project'));CREATE TABLE IF NOT EXISTS memory_entry(id INTEGER PRIMARY KEY AUTOINCREMENT,topic TEXT NOT NULL REFERENCES memory_topic(topic) ON UPDATE CASCADE,content TEXT NOT NULL,sources TEXT NOT NULL DEFAULT '[]',updated TEXT NOT NULL,updated_by TEXT NOT NULL CHECK(updated_by IN ('dream','agent','user')));CREATE INDEX IF NOT EXISTS idx_entry_topic ON memory_entry(topic);CREATE TABLE IF NOT EXISTS memory_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);INSERT OR IGNORE INTO memory_meta VALUES('schema_version','1');INSERT OR IGNORE INTO memory_topic(topic,kind) VALUES('profile','core'),('preference','core');`)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS memory_topic(topic TEXT PRIMARY KEY,kind TEXT NOT NULL CHECK(kind IN ('core','people','area','project')),aliases TEXT NOT NULL DEFAULT '[]',archived TEXT DEFAULT NULL,CHECK(archived IS NULL OR kind='project'));CREATE TABLE IF NOT EXISTS memory_entry(id INTEGER PRIMARY KEY AUTOINCREMENT,topic TEXT NOT NULL REFERENCES memory_topic(topic) ON UPDATE CASCADE,content TEXT NOT NULL,sources TEXT NOT NULL DEFAULT '[]',updated TEXT NOT NULL,updated_by TEXT NOT NULL CHECK(updated_by IN ('dream','agent','user')));CREATE INDEX IF NOT EXISTS idx_entry_topic ON memory_entry(topic);CREATE TABLE IF NOT EXISTS memory_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);INSERT OR IGNORE INTO memory_meta VALUES('schema_version','1');INSERT OR IGNORE INTO memory_topic(topic,kind) VALUES('profile','core'),('preference','core'),('self','core');`)
 	if err != nil {
 		db.Close()
 		return nil, err
@@ -138,7 +138,11 @@ func (s *Store) Replace(ctx context.Context, l Library) error {
 	return tx.Commit()
 }
 func Empty() Library {
-	return Library{{Topic: "profile", Kind: "core", Aliases: []string{}, Entries: []Entry{}}, {Topic: "preference", Kind: "core", Aliases: []string{}, Entries: []Entry{}}}
+	l := Library{}
+	for _, c := range CoreTopics {
+		l = append(l, Topic{Topic: c, Kind: "core", Aliases: []string{}, Entries: []Entry{}})
+	}
+	return l
 }
 func (s *Store) Apply(ctx context.Context, src Source, actions []Action, opts ApplyOptions) (BatchResult, error) {
 	s.mu.Lock()
@@ -256,7 +260,7 @@ func (s *Store) apply(lib *Library, src Source, a Action, o ApplyOptions, next *
 		if o.ForbidCreateTopic {
 			return apperr.Invalid("Creating topics is not allowed.")
 		}
-		if a.Kind == "core" || strings.EqualFold(a.Topic, "profile") || strings.EqualFold(a.Topic, "preference") {
+		if a.Kind == "core" || IsCoreTopic(a.Topic) {
 			return apperr.New(400, "CORE_TOPIC_RESTRICTED", "Core topics are fixed.")
 		}
 		if a.Kind != "people" && a.Kind != "area" && a.Kind != "project" {
