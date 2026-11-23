@@ -44,7 +44,7 @@ data/
     entries.csv
 ```
 
-Markdown front matter contains `date`, `created`, `updated`, `keywords`, `summary`, and optional `location`. Legacy scalar keywords, YAML dates, and absent metadata are accepted. Get/latest return full Markdown; search/similar return `DATE-[keywords]summary` strings.
+Markdown front matter contains `date`, `created`, `updated`, `keywords`, `summary`, and optional `location`. Legacy scalar keywords, YAML dates, and absent metadata are accepted. Get and latest with `recent=1` return full Markdown; latest with `recent>1`, search and similar return `DATE-[keywords]summary` strings.
 
 Markdown is the source of truth, but only add/patch touch it; every read (get, latest, search, similar) is served from `diary.db`. If embedding fails during a write, the entry is still stored and readable but has no vector until `POST /diary/normalize` backfills it. Normalize reuses unchanged summary vectors. `POST /diary/init` forces fresh embeddings and never touches memory. With `diary.active_normalize` (default `true`) the index is also re-synced from Markdown at startup and after every add/patch, reusing unchanged vectors, so external edits appear after the next restart or write; set it to `false` to have writes upsert only their own row. Either way, `POST /diary/normalize` makes external edits visible immediately.
 
@@ -130,7 +130,7 @@ All routes except `/healthz` require `Authorization: Bearer TOKEN`. Bodies are J
 |---|---|---|
 | GET | `/healthz` | Unauthenticated database ping |
 | GET | `/diary/search` | Required `from`, `to`; optional `limit`, repeated `query`; every term matches body or keywords |
-| GET | `/diary/latest` | `recent=1`, up to configured maximum; oldest first |
+| GET | `/diary/latest` | `recent=1`, up to configured maximum; oldest first; full Markdown only when `recent=1`, summary lines otherwise |
 | GET | `/diary/{date}` | Full Markdown |
 | POST | `/diary/{date}` | `content`, optional `meta: {keywords,summary,location}`; HTTP 201 |
 | POST | `/diary/patch` | `content`, optional `meta: {keywords,summary}`; latest entry only |

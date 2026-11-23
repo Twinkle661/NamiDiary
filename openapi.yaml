@@ -803,7 +803,7 @@ paths:
             summary: Fully rebuild derived diary index; REST only
     /diary/latest:
         get:
-            description: The upper bound is diary.latest_max (default 31). Entries retain front matter and are joined with a blank line.
+            description: The upper bound is diary.latest_max (default 31). With recent=1 the entry is returned as full Markdown with front matter; with recent>1 each entry is a DATE-[keywords]summary line (as in search), joined with newlines.
             operationId: get_diary_latest
             parameters:
                 - in: query
