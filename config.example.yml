@@ -52,7 +52,7 @@ memory:
     interval: 0s            # periodic normalize; 0 disables the timer
   backup:
     retention:
-      policy: max_age       # pluggable, see §7.6.3
+      policy: max_age       # pluggable; max_age is the only policy today
       max_age: 168h         # 7 days
   llm:
     base_url: https://openrouter.ai/api/v1   # client calls {base_url}/chat/completions
