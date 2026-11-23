@@ -225,10 +225,8 @@ Tests use temporary databases and local fake HTTP providers. The integration tes
 
 On NixOS, `nix-shell` supplies Go, a C compiler, SQLite headers and make using the included `shell.nix`.
 
-The implementation choices and deviations from illustrative PRD defaults are in [decisions.md](decisions.md).
-
 ## Security and privacy
 
 This is a single-user service for a trusted network. Put TLS and rate limiting in a reverse proxy before exposing it. Authentication uses a constant-time token comparison. MCP validates hosts and origins. The service never logs Authorization headers or HTTP request bodies. Debug mode deliberately logs full LLM prompts/replies, which include private diaries and memory; keep debug disabled for routine use. Provider error bodies are restricted to diagnostic logs, not client responses.
 
-Local `config.yml`, `.env*`, and data are ignored by Git; example files contain placeholders only. Runtime display names are configuration-only. The supplied PRD is retained as the original specification, while implementation docs, prompts and fixtures use neutral roles.
+Local `config.yml`, `.env*`, and data are ignored by Git; example files contain placeholders only. Runtime display names are configuration-only. Implementation docs, prompts and fixtures use neutral roles.
