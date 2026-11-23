@@ -573,9 +573,18 @@ func BuildQueryText(r SimilarRequest, maxChars int) (string, error) {
 	return string(rs), nil
 }
 func (s *Service) Similar(ctx context.Context, r SimilarRequest) ([]string, error) {
+	return s.SimilarN(ctx, r, s.Config.SimilarLimit)
+}
+
+// SimilarN is Similar with an explicit result count. The request is still
+// validated when n <= 0, but nothing is embedded or returned.
+func (s *Service) SimilarN(ctx context.Context, r SimilarRequest, n int) ([]string, error) {
 	text, err := BuildQueryText(r, s.Config.SimilarQueryMaxChars)
 	if err != nil {
 		return nil, err
+	}
+	if n <= 0 {
+		return []string{}, nil
 	}
 	vs, err := s.Embedder.Embed(ctx, []string{text})
 	if err != nil {
@@ -600,7 +609,7 @@ func (s *Service) Similar(ctx context.Context, r SimilarRequest) ([]string, erro
 	if count == 0 {
 		return []string{}, nil
 	}
-	out, err := s.compactRows(ctx, "SELECT d.date,d.keywords,d.summary FROM diary_vec v JOIN diary d ON d.id=v.id WHERE v.embedding MATCH ? AND k = ? ORDER BY v.distance ASC", v, s.Config.SimilarLimit)
+	out, err := s.compactRows(ctx, "SELECT d.date,d.keywords,d.summary FROM diary_vec v JOIN diary d ON d.id=v.id WHERE v.embedding MATCH ? AND k = ? ORDER BY v.distance ASC", v, n)
 	if errors.Is(err, sql.ErrNoRows) {
 		return []string{}, nil
 	}

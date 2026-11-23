@@ -9,9 +9,10 @@ import (
 
 type Section func(context.Context, diary.SimilarRequest) (string, error)
 
-func Related(d *diary.Service) Section {
+// Related retrieves the n most similar diary summaries.
+func Related(d *diary.Service, n int) Section {
 	return func(ctx context.Context, r diary.SimilarRequest) (string, error) {
-		lines, err := d.Similar(ctx, r)
+		lines, err := d.SimilarN(ctx, r, n)
 		if err != nil {
 			return "", err
 		}

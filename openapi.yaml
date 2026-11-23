@@ -411,8 +411,17 @@ openapi: 3.1.0
 paths:
     /context/dynamic:
         post:
-            description: Uses the same validation and retrieval as diary/similar. No deduplication against static context.
+            description: Uses the same validation and retrieval as diary/similar. The recent query parameter sets the result count (defaults to diary.similar_limit; recent=0 omits the section). It is unrelated to the recent field in the body. No deduplication against static context.
             operationId: post_context_dynamic
+            parameters:
+                - in: query
+                  name: recent
+                  required: false
+                  schema:
+                    default: 15
+                    maximum: 60
+                    minimum: 0
+                    type: integer
             requestBody:
                 content:
                     application/json:

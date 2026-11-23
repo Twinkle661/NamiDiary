@@ -110,10 +110,31 @@ func TestFullServer(t *testing.T) {
 	if status != 200 || !strings.Contains(body, "related_diaries") {
 		t.Fatalf("dynamic %d %s", status, body)
 	}
+	dynamicLines := func(path string) int {
+		t.Helper()
+		status, body := request("POST", path, `{"user_message":"reading"}`, true)
+		var out struct{ Content string }
+		if status != 200 || json.Unmarshal([]byte(body), &out) != nil {
+			t.Fatalf("%s: %d %s", path, status, body)
+		}
+		if out.Content == "" {
+			return 0
+		}
+		return strings.Count(out.Content, "\n") - 1
+	}
+	if n := dynamicLines("/context/dynamic"); n != 3 {
+		t.Fatalf("dynamic default: %d lines", n)
+	}
+	if n := dynamicLines("/context/dynamic?recent=2"); n != 2 {
+		t.Fatalf("dynamic recent=2: %d lines", n)
+	}
+	if n := dynamicLines("/context/dynamic?recent=0"); n != 0 {
+		t.Fatalf("dynamic recent=0: %d lines", n)
+	}
 	for _, tc := range []struct {
 		method, path, body string
 		status             int
-	}{{"POST", "/diary/normalize", "", 200}, {"POST", "/diary/init", "", 200}, {"POST", "/diary/patch", `{"content":"new"}`, 200}, {"POST", "/diary/similar", `{}`, 400}, {"GET", "/diary/latest?recent=0", "", 400}, {"GET", "/context/static?recent=-1", "", 400}, {"POST", "/memory/entries", `{"topic":"profile","content":"bad","updated_by":"dream"}`, 400}, {"POST", "/diary/patch", `{"meta":{"location":"forbidden"}}`, 400}, {"GET", "/prompt", "", 404}} {
+	}{{"POST", "/diary/normalize", "", 200}, {"POST", "/diary/init", "", 200}, {"POST", "/diary/patch", `{"content":"new"}`, 200}, {"POST", "/diary/similar", `{}`, 400}, {"GET", "/diary/latest?recent=0", "", 400}, {"GET", "/context/static?recent=-1", "", 400}, {"POST", "/context/dynamic?recent=61", `{"user_message":"x"}`, 400}, {"POST", "/context/dynamic?recent=0", `{}`, 400}, {"POST", "/memory/entries", `{"topic":"profile","content":"bad","updated_by":"dream"}`, 400}, {"POST", "/diary/patch", `{"meta":{"location":"forbidden"}}`, 400}, {"GET", "/prompt", "", 404}} {
 		status, body := request(tc.method, tc.path, tc.body, true)
 		if status != tc.status {
 			t.Errorf("%s: %d %s", tc.path, status, body)

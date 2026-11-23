@@ -123,6 +123,9 @@ type Config struct {
 			DefaultRecent int `yaml:"default_recent"`
 			MaxRecent     int `yaml:"max_recent"`
 		} `yaml:"static"`
+		Dynamic struct {
+			MaxRecent int `yaml:"max_recent"`
+		} `yaml:"dynamic"`
 	} `yaml:"context"`
 	Memory Memory `yaml:"memory"`
 }
@@ -134,6 +137,7 @@ func Defaults() Config {
 	c.Diary = Diary{SearchLimit: 20, LatestMax: 31, SimilarLimit: 15, SimilarQueryMaxChars: 4000, PatchWindow: 24 * time.Hour, FutureWindow: 24 * time.Hour, ActiveNormalize: true, Embedding: Embedding{BaseURL: "https://openrouter.ai/api/v1", Model: "qwen/qwen3-embedding-8b", Dimensions: 1024, BatchSize: 64, Concurrency: 4, Timeout: 30 * time.Second}}
 	c.Context.Static.DefaultRecent = 7
 	c.Context.Static.MaxRecent = 60
+	c.Context.Dynamic.MaxRecent = 60
 	c.Memory.EntryMaxChars = 200
 	c.Memory.Limits = Limits{Limit{MaxEntries: 30}, Limit{MaxEntries: 30}, Limit{20, 20}, Limit{15, 20}, Limit{7, 15}}
 	c.Memory.Dream.ContextDiaries = 3
@@ -270,7 +274,7 @@ func (c Config) Validate() []string {
 	check(c.App.DataDir != "", "app.data_dir is required")
 	_, err := time.LoadLocation(c.App.Timezone)
 	check(err == nil, "app.timezone is invalid")
-	for k, v := range map[string]int{"diary.search_limit": c.Diary.SearchLimit, "diary.latest_max": c.Diary.LatestMax, "diary.similar_limit": c.Diary.SimilarLimit, "diary.similar_query_max_chars": c.Diary.SimilarQueryMaxChars, "diary.embedding.dimensions": c.Diary.Embedding.Dimensions, "diary.embedding.batch_size": c.Diary.Embedding.BatchSize, "diary.embedding.concurrency": c.Diary.Embedding.Concurrency, "context.static.max_recent": c.Context.Static.MaxRecent, "memory.dream.context_diaries": c.Memory.Dream.ContextDiaries, "memory.llm.max_tokens": c.Memory.LLM.MaxTokens, "memory.llm.max_attempts": c.Memory.LLM.MaxAttempts} {
+	for k, v := range map[string]int{"diary.search_limit": c.Diary.SearchLimit, "diary.latest_max": c.Diary.LatestMax, "diary.similar_limit": c.Diary.SimilarLimit, "diary.similar_query_max_chars": c.Diary.SimilarQueryMaxChars, "diary.embedding.dimensions": c.Diary.Embedding.Dimensions, "diary.embedding.batch_size": c.Diary.Embedding.BatchSize, "diary.embedding.concurrency": c.Diary.Embedding.Concurrency, "context.static.max_recent": c.Context.Static.MaxRecent, "context.dynamic.max_recent": c.Context.Dynamic.MaxRecent, "memory.dream.context_diaries": c.Memory.Dream.ContextDiaries, "memory.llm.max_tokens": c.Memory.LLM.MaxTokens, "memory.llm.max_attempts": c.Memory.LLM.MaxAttempts} {
 		check(v > 0, k+" must be positive")
 	}
 	check(c.Context.Static.DefaultRecent >= 0 && c.Context.Static.DefaultRecent <= c.Context.Static.MaxRecent, "context.static.default_recent out of bounds")
