@@ -53,7 +53,7 @@ func New(a *rest.API, version string) (*sdk.Server, http.Handler) {
 			readOnly = true
 		case "diary_latest":
 			fields = map[string]string{"recent": "integer"}
-			description = fmt.Sprintf("Read the newest entries as full Markdown, oldest first. recent defaults to 1; maximum %d.", a.Config.Diary.LatestMax)
+			description = fmt.Sprintf("Read the newest entries, oldest first. recent=1 (default) returns the full Markdown; recent>1 returns DATE-[keywords]summary lines like diary_search. Maximum %d.", a.Config.Diary.LatestMax)
 			readOnly = true
 		case "diary_get":
 			fields = map[string]string{"date": "string"}
@@ -168,7 +168,7 @@ func call(ctx context.Context, a *rest.API, name string, in Input) (any, error) 
 			return nil, apperr.Invalid("Recent out of bounds.")
 		}
 		es, err := a.Diary.Latest(ctx, diary.LatestQuery{N: n})
-		return diary.Markdown(es), err
+		return diary.LatestView(es), err
 	case "diary_search":
 		n := a.Config.Diary.SearchLimit
 		if in.Limit != nil {

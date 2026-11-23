@@ -325,3 +325,14 @@ func TestOpenActiveNormalizeSyncsEdits(t *testing.T) {
 		}
 	}
 }
+
+func TestLatestView(t *testing.T) {
+	a := Entry{Date: "2026-01-01", Keywords: []string{"k"}, Summary: "s1", Body: "body one"}
+	b := Entry{Date: "2026-01-02", Keywords: []string{"x", "y"}, Summary: "s2", Body: "body two"}
+	if got := LatestView([]Entry{a}); got != a.Markdown() {
+		t.Fatalf("single: %q", got)
+	}
+	if got := LatestView([]Entry{a, b}); got != "2026-01-01-[k]s1\n2026-01-02-[x,y]s2" {
+		t.Fatalf("multi: %q", got)
+	}
+}

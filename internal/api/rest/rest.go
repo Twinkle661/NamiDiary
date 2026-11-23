@@ -78,7 +78,7 @@ func (a *API) handle(route string, r *http.Request) (int, any, error) {
 			return 0, nil, err
 		}
 		es, err := a.Diary.Latest(ctx, diary.LatestQuery{N: n})
-		return 200, Content(diary.Markdown(es)), err
+		return 200, Content(diary.LatestView(es)), err
 	case "GET /diary/search":
 		n, err := Number(r, "limit", a.Config.Diary.SearchLimit, 1, 10000)
 		if err != nil {

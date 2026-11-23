@@ -189,6 +189,19 @@ func Markdown(entries []Entry) string {
 	}
 	return strings.Join(parts, "\n")
 }
+
+// LatestView renders Latest results: full Markdown for a single entry,
+// one DATE-[keywords]summary line per entry otherwise (same as search).
+func LatestView(entries []Entry) string {
+	if len(entries) == 1 {
+		return Markdown(entries)
+	}
+	parts := make([]string, len(entries))
+	for i, e := range entries {
+		parts[i] = e.Compact()
+	}
+	return strings.Join(parts, "\n")
+}
 func atomicWrite(path string, b []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
