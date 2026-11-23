@@ -107,6 +107,13 @@ func (a *API) handle(route string, r *http.Request) (int, any, error) {
 	case "POST /diary/normalize", "POST /diary/init":
 		return 200, Success(), a.Diary.Normalize(ctx, route == "POST /diary/init")
 	case "POST /diary/similar", "POST /context/dynamic":
+		n := a.Config.Diary.SimilarLimit
+		if route == "POST /context/dynamic" {
+			var err error
+			if n, err = Number(r, "recent", n, 0, a.Config.Context.Dynamic.MaxRecent); err != nil {
+				return 0, nil, err
+			}
+		}
 		var b diary.SimilarRequest
 		if err := httpx.Body(r, &b); err != nil {
 			return 0, nil, err
@@ -115,7 +122,7 @@ func (a *API) handle(route string, r *http.Request) (int, any, error) {
 			out, err := a.Diary.Similar(ctx, b)
 			return 200, Content(out), err
 		}
-		out, err := dynamic.Assemble(ctx, b, dynamic.Related(a.Diary))
+		out, err := dynamic.Assemble(ctx, b, dynamic.Related(a.Diary, n))
 		return 200, Content(out), err
 	case "GET /context/static":
 		n, err := Number(r, "recent", a.Config.Context.Static.DefaultRecent, 0, a.Config.Context.Static.MaxRecent)
