@@ -83,7 +83,7 @@ Every scalar has a `NAMIDIARY_` environment name using double underscores betwee
 | `diary.embedding.timeout` | `30s` | `NAMIDIARY_DIARY__EMBEDDING__TIMEOUT` |
 | `context.static.default_recent` | `7` | `NAMIDIARY_CONTEXT__STATIC__DEFAULT_RECENT` |
 | `context.static.max_recent` | `60` | `NAMIDIARY_CONTEXT__STATIC__MAX_RECENT` |
-| `context.dynamic.max_recent` | `60` | `NAMIDIARY_CONTEXT__DYNAMIC__MAX_RECENT` |
+| `context.dynamic.max_limit` | `60` | `NAMIDIARY_CONTEXT__DYNAMIC__MAX_LIMIT` |
 | `memory.entry_max_chars` | `200` | `NAMIDIARY_MEMORY__ENTRY_MAX_CHARS` |
 | `memory.language` | `empty` | `NAMIDIARY_MEMORY__LANGUAGE` |
 | `memory.names.agent` | `empty` | `NAMIDIARY_MEMORY__NAMES__AGENT` |
@@ -148,7 +148,7 @@ All routes except `/healthz` require `Authorization: Bearer TOKEN`. Bodies are J
 | GET | `/memory/status` | Busy state, pending dream, last 20 jobs, violations, archives, latest snapshot |
 | GET | `/memory/snapshots` | Names, newest first; REST only |
 | GET | `/context/static` | `recent=0..max_recent`; summaries, core facts, directory |
-| POST | `/context/dynamic` | Same body as similar; `recent=0..max_recent` (default `diary.similar_limit`) results; related diary section |
+| POST | `/context/dynamic` | Same body as similar; `limit=0..max_limit` (default `diary.similar_limit`) results; related diary section |
 
 Similar uses nonempty `recent` in preference to `user_message`, formats each turn as `role: text`, and keeps the last configured number of Unicode code points. Role is any nonblank string. Static and dynamic context do not deduplicate against each other.
 

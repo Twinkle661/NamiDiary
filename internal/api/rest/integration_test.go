@@ -125,16 +125,16 @@ func TestFullServer(t *testing.T) {
 	if n := dynamicLines("/context/dynamic"); n != 3 {
 		t.Fatalf("dynamic default: %d lines", n)
 	}
-	if n := dynamicLines("/context/dynamic?recent=2"); n != 2 {
-		t.Fatalf("dynamic recent=2: %d lines", n)
+	if n := dynamicLines("/context/dynamic?limit=2"); n != 2 {
+		t.Fatalf("dynamic limit=2: %d lines", n)
 	}
-	if n := dynamicLines("/context/dynamic?recent=0"); n != 0 {
-		t.Fatalf("dynamic recent=0: %d lines", n)
+	if n := dynamicLines("/context/dynamic?limit=0"); n != 0 {
+		t.Fatalf("dynamic limit=0: %d lines", n)
 	}
 	for _, tc := range []struct {
 		method, path, body string
 		status             int
-	}{{"POST", "/diary/normalize", "", 200}, {"POST", "/diary/init", "", 200}, {"POST", "/diary/patch", `{"content":"new"}`, 200}, {"POST", "/diary/similar", `{}`, 400}, {"GET", "/diary/latest?recent=0", "", 400}, {"GET", "/context/static?recent=-1", "", 400}, {"POST", "/context/dynamic?recent=61", `{"user_message":"x"}`, 400}, {"POST", "/context/dynamic?recent=0", `{}`, 400}, {"POST", "/memory/entries", `{"topic":"profile","content":"bad","updated_by":"dream"}`, 400}, {"POST", "/diary/patch", `{"meta":{"location":"forbidden"}}`, 400}, {"GET", "/prompt", "", 404}} {
+	}{{"POST", "/diary/normalize", "", 200}, {"POST", "/diary/init", "", 200}, {"POST", "/diary/patch", `{"content":"new"}`, 200}, {"POST", "/diary/similar", `{}`, 400}, {"GET", "/diary/latest?recent=0", "", 400}, {"GET", "/context/static?recent=-1", "", 400}, {"POST", "/context/dynamic?limit=61", `{"user_message":"x"}`, 400}, {"POST", "/context/dynamic?limit=0", `{}`, 400}, {"POST", "/memory/entries", `{"topic":"profile","content":"bad","updated_by":"dream"}`, 400}, {"POST", "/diary/patch", `{"meta":{"location":"forbidden"}}`, 400}, {"GET", "/prompt", "", 404}} {
 		status, body := request(tc.method, tc.path, tc.body, true)
 		if status != tc.status {
 			t.Errorf("%s: %d %s", tc.path, status, body)

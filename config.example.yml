@@ -31,7 +31,7 @@ context:
     default_recent: 7       # used when ?recent is omitted
     max_recent: 60          # upper bound for ?recent
   dynamic:
-    max_recent: 60          # upper bound for ?recent; omitted → diary.similar_limit
+    max_limit: 60           # upper bound for ?limit; omitted → diary.similar_limit
 
 memory:
   entry_max_chars: 200      # counted in Unicode code points (runes)
