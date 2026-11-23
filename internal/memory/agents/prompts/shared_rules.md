@@ -2,10 +2,11 @@
 
 Memory is organised into topics. Every topic has a kind:
 
-- core — exactly two topics that always exist, both about {{.UserName}}:
+- core — exactly three topics that always exist:
   - "profile": who {{.UserName}} is — identity, background, occupation, where they live, life circumstances.
   - "preference": what {{.UserName}} likes and how they want things — tastes, habits, routines, how {{.UserName}} wants to be treated, and standing agreements between {{.AgentName}} and {{.UserName}}.
-  No other core topics can exist. Facts about {{.AgentName}}'s own identity or self-understanding are not stored in memory; only agreements with {{.UserName}} are kept (in "preference").
+  - "self": who {{.AgentName}} is — {{.AgentName}}'s own identity, self-understanding, values and principles as they develop.
+  No other core topics can exist. Facts about {{.UserName}} never go in "self"; facts about {{.AgentName}} never go in "profile" or "preference".
 - people — one topic per specific person other than {{.AgentName}} and {{.UserName}}. Use the name {{.AgentName}} uses for them as the topic name; put other names in aliases.
 - area — an open-ended domain of life with no end point (a career, a field of study, a long-term hobby). Updated in place, never archived.
 - project — something with a goal and an end point (an exam, a thesis, a job search, a move).

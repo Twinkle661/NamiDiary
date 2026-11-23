@@ -238,6 +238,12 @@ func (m *Manager) Read(name string) (memory.Library, error) {
 		}
 		lib[idx].Entries = append(lib[idx].Entries, e)
 	}
+	// Snapshots taken before a core topic existed lack it; add it empty.
+	for _, c := range memory.Empty() {
+		if lib.Resolve(c.Topic) < 0 {
+			lib = append(lib, c)
+		}
+	}
 	if err = memory.ValidateLibrary(lib); err != nil {
 		return nil, err
 	}

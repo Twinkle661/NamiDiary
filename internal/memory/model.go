@@ -37,6 +37,19 @@ type Topic struct {
 	Entries  []Entry  `json:"entries"`
 }
 type Library []Topic
+
+// CoreTopics are the fixed core topics, in display order.
+var CoreTopics = []string{"profile", "preference", "self"}
+
+func IsCoreTopic(name string) bool {
+	for _, c := range CoreTopics {
+		if strings.EqualFold(name, c) {
+			return true
+		}
+	}
+	return false
+}
+
 type Action struct {
 	Op      string   `json:"op"`
 	Topic   string   `json:"topic,omitempty"`
@@ -263,11 +276,11 @@ func ValidateLibrary(l Library) error {
 			return apperr.Invalid("Invalid topic kind.")
 		}
 		if t.Kind == "core" {
-			if t.Topic != "profile" && t.Topic != "preference" {
+			if !IsCoreTopic(t.Topic) || strings.ToLower(t.Topic) != t.Topic {
 				return apperr.Invalid("Invalid core topic.")
 			}
 			core[t.Topic] = true
-		} else if t.Topic == "profile" || t.Topic == "preference" {
+		} else if IsCoreTopic(t.Topic) {
 			return apperr.Invalid("Reserved core topic name.")
 		}
 		if t.Archived != nil {
@@ -304,8 +317,10 @@ func ValidateLibrary(l Library) error {
 			}
 		}
 	}
-	if !core["profile"] || !core["preference"] {
-		return fmt.Errorf("both core topics are required")
+	for _, c := range CoreTopics {
+		if !core[c] {
+			return fmt.Errorf("all core topics are required")
+		}
 	}
 	return nil
 }
