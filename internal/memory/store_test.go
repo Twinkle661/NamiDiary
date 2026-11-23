@@ -128,7 +128,7 @@ func TestPostCheckRollbackAndReadOrdering(t *testing.T) {
 	if string(a) != string(b) {
 		t.Fatal("postcheck committed")
 	}
-	if after[2].Topic != "Alpha" || after[3].Topic != "zeta" {
+	if n := len(memory.CoreTopics); after[n].Topic != "Alpha" || after[n+1].Topic != "zeta" {
 		t.Fatal("kind order")
 	}
 	selected, err := after.Select([]string{"ALIAS", "Alpha"})
