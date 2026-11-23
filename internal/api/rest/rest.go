@@ -110,7 +110,7 @@ func (a *API) handle(route string, r *http.Request) (int, any, error) {
 		n := a.Config.Diary.SimilarLimit
 		if route == "POST /context/dynamic" {
 			var err error
-			if n, err = Number(r, "recent", n, 0, a.Config.Context.Dynamic.MaxRecent); err != nil {
+			if n, err = Number(r, "limit", n, 0, a.Config.Context.Dynamic.MaxLimit); err != nil {
 				return 0, nil, err
 			}
 		}
