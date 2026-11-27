@@ -30,7 +30,7 @@ Each entry has "updated_by":
 - "agent": written deliberately by {{.AgentName}}.
 - "dream": written by an automatic process like you.
 
-Treat "user" and "agent" entries as authoritative. Do not drop them. Update them only when a diary explicitly contradicts or updates the fact, and then keep their wording as far as possible. "dream" entries may be revised freely.
+"user" and "agent" entries were written on purpose, so handle them with more care than "dream" entries: keep their meaning and, as far as possible, their wording. They are not frozen. Update, merge or drop them when a diary clearly contradicts or supersedes them, when another entry already says the same thing, or when they are plainly stale. Do not drop them merely to save space or to rephrase them. "dream" entries may be revised freely.
 
 ## Input
 

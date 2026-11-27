@@ -8,7 +8,7 @@ You receive the full library, the limits, and a list of violations.
 
 1. Resolve every violation. Aim for about 80% of each limit so compaction is not needed again immediately.
 2. Merge closely related entries into one (update one, drop the others), keeping the union of their sources.
-3. Drop stale or trivial entries. Prefer dropping "dream" entries over "user" or "agent" entries; merge "user"/"agent" entries only when nothing else is possible, and preserve their meaning. In that case only, this overrides the shared rule that "user" and "agent" entries are never dropped: you may drop such an entry when its meaning is fully kept in the merged entry.
+3. Drop stale or trivial entries. Reach for "dream" entries first. "user" and "agent" entries may be merged with other entries (keeping their meaning) or dropped when they are stale or duplicated, but not just to make room.
 4. If a kind has too many topics, merge the least important topics into related ones (move their facts with add, then drop the originals).
 5. Do not change facts while merging, and do not create new topics beyond the limits.
 
