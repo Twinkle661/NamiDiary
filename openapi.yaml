@@ -209,7 +209,7 @@ components:
                 attempt:
                     type: integer
                 date:
-                    description: Diary date a manual dated dream ran as of; absent for undated dreams and other jobs.
+                    description: Diary date a manual dream ran as of; absent for automatic dreams and other jobs.
                     type: string
                 error:
                     description: Failure detail. Provider rejections include the HTTP status and up to 2000 code points of the provider response body.
@@ -1607,7 +1607,7 @@ paths:
             summary: Snapshot, reset, then replay newest N entries
     /memory/dream:
         post:
-            description: REST only. Starts a dream job now, for retrying a failed automatic dream. Without date it runs exactly like the automatic post-add dream (newest diaries, today's date). With date it runs as of that day, seeing only diaries up to it. Poll status for asynchronous failure.
+            description: REST only. Starts a dream job now, for retrying a failed automatic dream. Runs as of the given date (default: the newest diary's date, not today): only diaries up to that date are read and it is used as today. Poll status for asynchronous failure.
             operationId: post_memory_dream
             parameters:
                 - in: query

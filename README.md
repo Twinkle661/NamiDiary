@@ -145,7 +145,7 @@ All routes except `/healthz` require `Authorization: Bearer TOKEN`. Bodies are J
 | PATCH | `/memory/topics/{topic}` | Replace `aliases` array |
 | POST | `/memory/topics/{topic}/archive` | Mark a project for archive maintenance |
 | POST | `/memory/normalize` | Background repair/archive/compact/snapshot/prune |
-| POST | `/memory/dream` | `date=yyyy-MM-dd` optional; run a dream now (retry). No date = same as the automatic post-add dream; a date runs as of that day. REST only |
+| POST | `/memory/dream` | `date=yyyy-MM-dd` (default: newest diary, not today); run a dream now as of that date, e.g. to retry last night's failed dream. REST only |
 | POST | `/memory/init` | `recent=0..365`; safety snapshot, reset, sequential historical replay |
 | POST | `/memory/restore` | `{"snapshot":"TIMESTAMP"}` or `{}` for newest; background job |
 | GET | `/memory/status` | Busy state, pending dream, last 20 jobs, violations, archives, latest snapshot |

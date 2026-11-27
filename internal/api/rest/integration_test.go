@@ -159,7 +159,7 @@ func TestFullServer(t *testing.T) {
 		}
 	}
 	waitIdle()
-	if st, _ := w.Status(context.Background()); st.LastJobs[0].Type != "dream" || st.LastJobs[0].Date != "2026-01-03" || !st.LastJobs[0].OK || !st.LastJobs[1].OK {
+	if st, _ := w.Status(context.Background()); st.LastJobs[0].Type != "dream" || st.LastJobs[0].Date != "2026-01-03" || !st.LastJobs[0].OK || st.LastJobs[1].Date != "2026-01-05" || !st.LastJobs[1].OK {
 		t.Fatalf("manual dreams %+v", st.LastJobs[:2])
 	}
 	for _, tc := range []struct {

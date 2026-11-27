@@ -168,6 +168,9 @@ func (a *API) handle(route string, r *http.Request) (int, any, error) {
 			if len(es) == 0 {
 				return 0, nil, apperr.Missing("No diary entries to dream over.")
 			}
+			// Default to the newest diary's date, not today: the usual retry is
+			// the morning after a failed late-night entry.
+			date = es[len(es)-1].Date
 		}
 		if err := a.Worker.RequestDream(date); err != nil {
 			return 0, nil, err
