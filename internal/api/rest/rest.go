@@ -24,7 +24,7 @@ type API struct {
 	Backup *backup.Manager
 }
 
-var Routes = []string{"GET /healthz", "GET /diary/search", "GET /diary/latest", "GET /diary/{date}", "POST /diary/{date}", "POST /diary/patch", "POST /diary/similar", "POST /diary/normalize", "POST /diary/init", "GET /memory/topics", "GET /memory/entries", "POST /memory/entries", "PUT /memory/entries/{id}", "DELETE /memory/entries/{id}", "PATCH /memory/topics/{topic}", "POST /memory/topics/{topic}/archive", "POST /memory/normalize", "POST /memory/init", "POST /memory/restore", "GET /memory/status", "GET /memory/snapshots", "GET /context/static", "POST /context/dynamic"}
+var Routes = []string{"GET /healthz", "GET /diary/search", "GET /diary/latest", "GET /diary/{date}", "POST /diary/{date}", "POST /diary/patch", "POST /diary/similar", "POST /diary/normalize", "POST /diary/init", "GET /memory/topics", "GET /memory/entries", "POST /memory/entries", "PUT /memory/entries/{id}", "DELETE /memory/entries/{id}", "PATCH /memory/topics/{topic}", "POST /memory/topics/{topic}/archive", "POST /memory/normalize", "POST /memory/dream", "POST /memory/init", "POST /memory/restore", "GET /memory/status", "GET /memory/snapshots", "GET /context/static", "POST /context/dynamic"}
 
 func Number(r *http.Request, key string, def, lo, hi int) (int, error) {
 	raw, ok := r.URL.Query()[key]
@@ -151,6 +151,31 @@ func (a *API) handle(route string, r *http.Request) (int, any, error) {
 			out = append(out, s.Name)
 		}
 		return 200, Content(out), err
+	case "POST /memory/dream":
+		date := r.URL.Query().Get("date")
+		if raw := r.URL.Query()["date"]; len(raw) > 1 {
+			return 0, nil, apperr.Invalid("date must occur once.")
+		}
+		if date != "" {
+			if _, err := a.Diary.Get(ctx, date); err != nil {
+				return 0, nil, err
+			}
+		} else {
+			es, err := a.Diary.Latest(ctx, diary.LatestQuery{N: 1})
+			if err != nil {
+				return 0, nil, err
+			}
+			if len(es) == 0 {
+				return 0, nil, apperr.Missing("No diary entries to dream over.")
+			}
+			// Default to the newest diary's date, not today: the usual retry is
+			// the morning after a failed late-night entry.
+			date = es[len(es)-1].Date
+		}
+		if err := a.Worker.RequestDream(date); err != nil {
+			return 0, nil, err
+		}
+		return 202, map[string]string{"status": "accepted", "job": "dream"}, nil
 	case "POST /memory/normalize", "POST /memory/init", "POST /memory/restore":
 		job := "maintenance"
 		recent := 0

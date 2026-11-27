@@ -93,8 +93,9 @@ func (c *Client) batch(ctx context.Context, input []string) ([][]float32, error)
 		return nil, err
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		slog.Error("Embedding provider failed", "status", res.StatusCode, "body", string([]rune(string(b))[:min(1000, len([]rune(string(b))))]))
-		return nil, apperr.New(502, "EMBEDDING_PROVIDER_ERROR", "Embedding provider rejected the request.")
+		detail := apperr.Excerpt(b)
+		slog.Error("Embedding provider failed", "model", c.Config.Model, "status", res.StatusCode, "body", detail)
+		return nil, &apperr.Error{Status: 502, Code: "EMBEDDING_PROVIDER_ERROR", Message: "Embedding provider rejected the request.", Cause: fmt.Errorf("HTTP %d: %s", res.StatusCode, detail)}
 	}
 	var data struct {
 		Data []struct {

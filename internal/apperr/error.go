@@ -1,6 +1,10 @@
 package apperr
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+	"unicode/utf8"
+)
 
 type Error struct {
 	Status        int
@@ -23,4 +27,20 @@ func Invalid(message string) *Error { return New(400, "INVALID_REQUEST", message
 func Missing(message string) *Error { return New(404, "NOT_FOUND", message) }
 func Busy(module string) *Error {
 	return New(503, module+"_BUSY", "Work is in progress; retry in a moment.")
+}
+
+// ExcerptMax bounds provider response bodies copied into logs and job errors.
+const ExcerptMax = 2000
+
+// Excerpt returns a provider response body verbatim (trimmed, invalid UTF-8
+// replaced) up to ExcerptMax code points, for diagnostics.
+func Excerpt(b []byte) string {
+	s := strings.TrimSpace(strings.ToValidUTF8(string(b), "\uFFFD"))
+	if s == "" {
+		return "(empty body)"
+	}
+	if utf8.RuneCountInString(s) <= ExcerptMax {
+		return s
+	}
+	return string([]rune(s)[:ExcerptMax]) + "…(truncated)"
 }
