@@ -1607,7 +1607,7 @@ paths:
             summary: Snapshot, reset, then replay newest N entries
     /memory/dream:
         post:
-            description: REST only. Starts a dream job now, for retrying a failed automatic dream. Runs as of the given date (default: the newest diary's date, not today): only diaries up to that date are read and it is used as today. Poll status for asynchronous failure.
+            description: "REST only. Starts a dream job now, for retrying a failed automatic dream. Runs as of the given date (default: the newest diary's date, not today): only diaries up to that date are read and it is used as today. Poll status for asynchronous failure."
             operationId: post_memory_dream
             parameters:
                 - in: query
