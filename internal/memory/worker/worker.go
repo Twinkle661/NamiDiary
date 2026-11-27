@@ -18,6 +18,7 @@ import (
 
 type Job struct {
 	Type     string `json:"type"`
+	Date     string `json:"date,omitempty"`
 	Started  string `json:"started"`
 	Finished string `json:"finished,omitempty"`
 	Step     string `json:"step,omitempty"`
@@ -96,6 +97,26 @@ func (w *Worker) Request(job string, recent int, snapshot string) error {
 		return apperr.Busy("MEMORY")
 	}
 	j := Job{Type: job, Recent: recent, Snapshot: snapshot, Started: time.Now().UTC().Format(time.RFC3339Nano)}
+	w.current = &j
+	w.jobs <- j
+	w.mu.Unlock()
+	return nil
+}
+
+// RequestDream starts a dream job now. An empty date runs exactly like the
+// automatic post-add dream (newest diaries, today's date); a date replays as
+// of that day, like an init pass. Callers validate that the diary exists.
+func (w *Worker) RequestDream(date string) error {
+	if !w.gate.TryLock() {
+		return apperr.Busy("MEMORY")
+	}
+	w.mu.Lock()
+	if w.stopped {
+		w.mu.Unlock()
+		w.gate.Unlock()
+		return apperr.Busy("MEMORY")
+	}
+	j := Job{Type: "dream", Date: date, Started: time.Now().UTC().Format(time.RFC3339Nano)}
 	w.current = &j
 	w.jobs <- j
 	w.mu.Unlock()
@@ -220,11 +241,15 @@ func (w *Worker) loop() {
 	}
 }
 func (w *Worker) run(j Job) {
-	slog.Info("Memory job started", "job", j.Type)
+	slog.Info("Memory job started", "job", j.Type, "date", j.Date)
 	var err error
 	switch j.Type {
 	case "dream":
-		err = w.Runner.Run(w.ctx, "dream", nil, "")
+		var until *string
+		if j.Date != "" {
+			until = &j.Date
+		}
+		err = w.Runner.Run(w.ctx, "dream", until, "")
 		err = errors.Join(err, w.maintain(w.ctx))
 	case "maintenance":
 		err = w.maintain(w.ctx)

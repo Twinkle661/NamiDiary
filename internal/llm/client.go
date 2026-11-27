@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -62,8 +63,9 @@ func (c *Client) Complete(ctx context.Context, agent string, messages []Message)
 		return "", err
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		slog.Error("LLM provider failed", "status", res.StatusCode)
-		return "", apperr.New(502, "LLM_REQUEST_ERROR", "LLM provider rejected the request.")
+		detail := apperr.Excerpt(b)
+		slog.Error("LLM provider failed", "agent", agent, "model", model, "status", res.StatusCode, "body", detail)
+		return "", &apperr.Error{Status: 502, Code: "LLM_REQUEST_ERROR", Message: "LLM provider rejected the request.", Cause: fmt.Errorf("HTTP %d: %s", res.StatusCode, detail)}
 	}
 	var out struct {
 		Choices []struct {
@@ -72,7 +74,9 @@ func (c *Client) Complete(ctx context.Context, agent string, messages []Message)
 		Usage any `json:"usage"`
 	}
 	if err = json.Unmarshal(b, &out); err != nil || len(out.Choices) == 0 || out.Choices[0].Message.Content == "" {
-		return "", apperr.New(502, "LLM_RESPONSE_ERROR", "Missing LLM reply.")
+		detail := apperr.Excerpt(b)
+		slog.Error("LLM reply missing", "agent", agent, "model", model, "body", detail)
+		return "", &apperr.Error{Status: 502, Code: "LLM_RESPONSE_ERROR", Message: "Missing LLM reply.", Cause: fmt.Errorf("body: %s", detail)}
 	}
 	slog.Info("LLM response", "agent", agent, "usage", out.Usage)
 	slog.Debug("LLM reply", "reply", out.Choices[0].Message.Content)

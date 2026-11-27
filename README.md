@@ -145,6 +145,7 @@ All routes except `/healthz` require `Authorization: Bearer TOKEN`. Bodies are J
 | PATCH | `/memory/topics/{topic}` | Replace `aliases` array |
 | POST | `/memory/topics/{topic}/archive` | Mark a project for archive maintenance |
 | POST | `/memory/normalize` | Background repair/archive/compact/snapshot/prune |
+| POST | `/memory/dream` | `date=yyyy-MM-dd` optional; run a dream now (retry). No date = same as the automatic post-add dream; a date runs as of that day. REST only |
 | POST | `/memory/init` | `recent=0..365`; safety snapshot, reset, sequential historical replay |
 | POST | `/memory/restore` | `{"snapshot":"TIMESTAMP"}` or `{}` for newest; background job |
 | GET | `/memory/status` | Busy state, pending dream, last 20 jobs, violations, archives, latest snapshot |
@@ -154,7 +155,7 @@ All routes except `/healthz` require `Authorization: Bearer TOKEN`. Bodies are J
 
 Similar uses nonempty `recent` in preference to `user_message`, formats each turn as `role: text`, and keeps the last configured number of Unicode code points. Role is any nonblank string. Static and dynamic context do not deduplicate against each other.
 
-Errors use `{"status":"error","code":"...","message":"...","details":{...}}`. Details are optional. Busy errors (`MEMORY_BUSY`, `DIARY_BUSY`) return HTTP 503 and `Retry-After: 10`. Other codes distinguish validation (400), authentication (401), origin rejection (403), missing resources (404), conflicts/caps (409), provider failures (502), and internal/parse failures (500). Debug mode adds diagnostic information to server errors. Job failures appear in `/memory/status`, not in the already-returned 202 response.
+Errors use `{"status":"error","code":"...","message":"...","details":{...}}`. Details are optional. Busy errors (`MEMORY_BUSY`, `DIARY_BUSY`) return HTTP 503 and `Retry-After: 10`. Other codes distinguish validation (400), authentication (401), origin rejection (403), missing resources (404), conflicts/caps (409), provider failures (502), and internal/parse failures (500). Debug mode adds diagnostic information to server errors. Job failures appear in `/memory/status`, not in the already-returned 202 response. Provider rejections (LLM or embedding) are logged with the HTTP status and up to 2000 code points of the provider's response body, and the same detail appears in the failed job's `error`; to retry a failed dream, call `POST /memory/dream`.
 
 ## Memory model and concurrency
 

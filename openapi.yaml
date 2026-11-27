@@ -5,6 +5,7 @@ components:
             properties:
                 job:
                     enum:
+                        - dream
                         - maintenance
                         - init
                         - restore
@@ -207,7 +208,11 @@ components:
             properties:
                 attempt:
                     type: integer
+                date:
+                    description: Diary date a manual dated dream ran as of; absent for undated dreams and other jobs.
+                    type: string
                 error:
+                    description: Failure detail. Provider rejections include the HTTP status and up to 2000 code points of the provider response body.
                     type: string
                 finished:
                     type: string
@@ -1600,6 +1605,79 @@ paths:
                                 const: "10"
                                 type: string
             summary: Snapshot, reset, then replay newest N entries
+    /memory/dream:
+        post:
+            description: REST only. Starts a dream job now, for retrying a failed automatic dream. Without date it runs exactly like the automatic post-add dream (newest diaries, today's date). With date it runs as of that day, seeing only diaries up to it. Poll status for asynchronous failure.
+            operationId: post_memory_dream
+            parameters:
+                - in: query
+                  name: date
+                  required: false
+                  schema:
+                    format: date
+                    type: string
+            responses:
+                "202":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Accepted'
+                    description: Success
+                "400":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Invalid request, length, core-topic or future-date constraint.
+                "401":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Missing or invalid bearer token.
+                "403":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: MCP host or origin forbidden.
+                "404":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Resource not found.
+                "409":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Conflict, expired patch window, kind/alias/topic-cap or archived-topic constraint.
+                "500":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Internal, diary parse or embedding configuration error.
+                "502":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Provider error.
+                "503":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: 'Busy: retry after 10 seconds.'
+                    headers:
+                        Retry-After:
+                            description: Retry delay in seconds.
+                            schema:
+                                const: "10"
+                                type: string
+            summary: Run a dream now
     /memory/normalize:
         post:
             operationId: post_memory_normalize

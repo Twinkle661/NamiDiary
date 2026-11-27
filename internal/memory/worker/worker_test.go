@@ -159,3 +159,33 @@ func TestExternalViolationQueuesMaintenance(t *testing.T) {
 		t.Fatalf("maintenance status %+v", status)
 	}
 }
+func TestRequestDream(t *testing.T) {
+	s, c := testutil.Store(t)
+	p := &provider{}
+	d := &reader{}
+	r := &agents.Runner{Store: s, Config: c.Memory, Diary: d, Client: p, Location: time.UTC}
+	w := worker.New(context.Background(), s, r, backup.New(s, c.App.DataDir, c.Memory.Backup.Retention))
+	t.Cleanup(w.Stop)
+	if err := w.RequestDream(""); err != nil {
+		t.Fatal(err)
+	}
+	wait(t, w, 1)
+	if err := w.RequestDream("2026-01-03"); err != nil {
+		t.Fatal(err)
+	}
+	wait(t, w, 2)
+	st, _ := w.Status(context.Background())
+	if st.LastJobs[0].Type != "dream" || st.LastJobs[0].Date != "2026-01-03" || !st.LastJobs[0].OK || st.LastJobs[1].Date != "" {
+		t.Fatalf("jobs %+v", st.LastJobs)
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if len(d.queries) != 2 || d.queries[0].Until != nil || d.queries[1].Until == nil || *d.queries[1].Until != "2026-01-03" {
+		t.Fatalf("queries %+v", d.queries)
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !strings.Contains(p.messages[1][1].Content, "<today>2026-01-03</today>") || !strings.Contains(p.messages[1][1].Content, `date="2026-01-03"`) || strings.Contains(p.messages[1][1].Content, `date="2026-01-10"`) {
+		t.Fatal("dated dream used wrong context")
+	}
+}

@@ -131,6 +131,37 @@ func TestFullServer(t *testing.T) {
 	if n := dynamicLines("/context/dynamic?limit=0"); n != 0 {
 		t.Fatalf("dynamic limit=0: %d lines", n)
 	}
+	waitIdle := func() {
+		t.Helper()
+		deadline := time.Now().Add(5 * time.Second)
+		for {
+			st, err := w.Status(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !st.Busy && !st.PendingDream {
+				return
+			}
+			if time.Now().After(deadline) {
+				t.Fatal("worker timeout")
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+	}
+	for _, tc := range []struct {
+		path   string
+		status int
+	}{{"/memory/dream", 202}, {"/memory/dream?date=2026-01-03", 202}, {"/memory/dream?date=2026-01-02", 404}, {"/memory/dream?date=2026-02-30", 400}, {"/memory/dream?date=2026-01-03&date=2026-01-05", 400}} {
+		waitIdle()
+		status, body := request("POST", tc.path, "", true)
+		if status != tc.status {
+			t.Errorf("%s: %d %s", tc.path, status, body)
+		}
+	}
+	waitIdle()
+	if st, _ := w.Status(context.Background()); st.LastJobs[0].Type != "dream" || st.LastJobs[0].Date != "2026-01-03" || !st.LastJobs[0].OK || !st.LastJobs[1].OK {
+		t.Fatalf("manual dreams %+v", st.LastJobs[:2])
+	}
 	for _, tc := range []struct {
 		method, path, body string
 		status             int
@@ -161,7 +192,7 @@ func TestFullServer(t *testing.T) {
 		t.Fatalf("tools %d", len(listed.Tools))
 	}
 	for _, tool := range listed.Tools {
-		if strings.Contains(tool.Name, "init") || strings.Contains(tool.Name, "restore") || strings.Contains(tool.Name, "snapshots") {
+		if strings.Contains(tool.Name, "init") || strings.Contains(tool.Name, "restore") || strings.Contains(tool.Name, "snapshots") || strings.Contains(tool.Name, "dream") {
 			t.Fatal("destructive maintenance exposed")
 		}
 	}
