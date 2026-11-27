@@ -14,7 +14,11 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      # The runner image ships a packages.microsoft.com source that can break
+      # apt-get update; we only need Ubuntu's own archive, so drop it first.
+      - run: |
+          sudo grep -l packages.microsoft.com /etc/apt/sources.list.d/* 2>/dev/null | xargs -r sudo rm -f
+          sudo apt-get update && sudo apt-get install -y libsqlite3-dev
       - run: go test -race ./...
       - run: go vet ./...
       - run: test -z "$(gofmt -l cmd internal)"
