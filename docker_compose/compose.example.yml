@@ -1,10 +1,10 @@
 services:
-  NamiDiary:
-    build: .
-    container_name: NamiDiary
+  namidiary:
+    build: ..
+    container_name: namidiary
     restart: unless-stopped
-    expose:
-      - "8188"
+    ports:
+      - "127.0.0.1:8188:8188"
     env_file: .env
     volumes:
       - ./data:/app/data
